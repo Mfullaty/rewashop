@@ -57,7 +57,7 @@
 
 
 @section('content')
-    <div class="product-details">
+    <div class="product-details @if(get_setting('homepage_select') === 'market') market-product-detail @endif">
         <!--PRODUCT DETAILS TOP SECTION START-->
         <div class="container">
             <div class="pt-30px pb-6">

@@ -1,4 +1,4 @@
-@extends('backend.layouts.layout')
+@extends(get_setting('homepage_select') === 'market' ? 'auth.layouts.authentication' : 'backend.layouts.layout')
 
 @section('content')
 

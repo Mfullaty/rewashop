@@ -89,8 +89,14 @@
     <script>
         var AIZ = AIZ || {};
     </script>
+    @if(get_setting('homepage_select') === 'market')
+        <link rel="stylesheet" href="{{ static_asset('assets/css/rewa-market.css?v=1') }}">
+    @endif
 </head>
-<body>
+<body @if(get_setting('homepage_select') === 'market') class="rewa-market market-auth" @endif>
+    @if(get_setting('homepage_select') === 'market')
+        <a class="market-auth-home" href="{{ route('home') }}"><i class="las la-arrow-left" aria-hidden="true"></i> {{ translate('Back to shopping') }}</a>
+    @endif
 
     @yield('content')
 

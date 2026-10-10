@@ -24,6 +24,20 @@
 				@csrf
 				<input type="hidden" name="types[]" value="homepage_select">
 				<div class="row">
+					<!-- Rewa Market -->
+                    <div class="col-xxl-3 col-lg-4 col-sm-6 my-3">
+                        <label class="aiz-megabox d-block mb-3">
+                            <input value="market" type="radio" name="homepage_select" @if(get_setting('homepage_select') === 'market') checked @endif>
+                            <span class="d-block aiz-megabox-elem rounded-0 img-overlay">
+                                <div class="h-350px w-100 overflow-hidden"><img src="{{ static_asset('assets/img/pages/home-market.svg') }}" class="w-100" alt="{{ translate('Rewa Market theme preview') }}"></div>
+                            </span>
+                        </label>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="fs-14 fw-500 text-dark">{{ translate('Rewa Market') }}</span>
+                            <button type="button" class="btn btn-xs btn-danger" onclick="imageShowOverlay('{{ static_asset('assets/img/pages/home-market.svg') }}')">{{ translate('View') }}</button>
+                        </div>
+                        <p class="text-muted small mt-2">{{ translate('Modern storefront, editorial blog and polished product pages. Configured from Homepage Settings.') }}</p>
+                    </div>
 					<!-- Home Classic -->
 					<div class="col-xxl-3 col-lg-4 col-sm-6 my-3">
 						<label class="aiz-megabox d-block mb-3">
