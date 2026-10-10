@@ -13,11 +13,6 @@
             </div>
             <div class="col text-center text-md-right order-1 order-md-2">
                 <div class="d-flex justify-content-start justify-content-md-end">
-                    <div class="mr-3">
-                        <a href="https://activeitzone.com/activation/addon" class="btn btn-primary" target="_blank">
-                            {{ translate('Activate Addon Link') }}
-                        </a>
-                    </div>
                     <div>
                         <a href="{{ route('addons.create') }}"
                             class="btn btn-primary">{{ translate('Install/Update Addon') }}</a>
@@ -51,13 +46,6 @@
                                 <p class="fs-12 fw-semibold text-dark mb-2">{{ translate('Version No.') }} </p>
                                 <span class="fs-12 fw-400 text-muted">{{ $addon->version }} </span>
                             </div>
-                            @if (env('DEMO_MODE') != 'On')
-                                <div class="mt-2">
-                                    <p class="fs-12 fw-semibold text-dark mb-2">{{ translate('Purchase Code') }} </p>
-                                    <span class="fs-12 fw-400 text-muted">{{ $addon->purchase_code }}
-                                    </span>
-                                </div>
-                            @endif
                         </div>
                 @empty
                     <li class="list-group-item">
