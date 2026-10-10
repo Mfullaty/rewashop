@@ -247,7 +247,7 @@
 @endphp
 
     @if(get_setting('homepage_select') === 'market')
-        <link rel="stylesheet" href="{{ static_asset('assets/css/rewa-market.css?v=1') }}">
+        <link rel="stylesheet" href="{{ static_asset('assets/css/rewa-market.css?v=2') }}">
     @endif
 </head>
 <body @if(get_setting('homepage_select') === 'market') class="rewa-market" @endif>
@@ -1274,7 +1274,9 @@
         }
 
         function goToView(params) {
-            document.getElementById(params).scrollIntoView({behavior: "smooth", block: "center"});
+            const target = document.getElementById(params);
+            if (!target) return;
+            target.scrollIntoView({behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: document.body.classList.contains('rewa-market') ? 'start' : 'center'});
         }
 
         function copyCouponCode(code){
@@ -1593,7 +1595,7 @@
     </script>
 
     @if(get_setting('homepage_select') === 'market')
-        <script src="{{ static_asset('assets/js/rewa-market.js?v=1') }}" defer></script>
+        <script src="{{ static_asset('assets/js/rewa-market.js?v=2') }}" defer></script>
     @endif
     @yield('script')
 

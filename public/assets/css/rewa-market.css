@@ -5,23 +5,24 @@
     --soft-blue: var(--soft-primary);
     --market-ink: #18191d;
     --market-muted: #626670;
-    --market-canvas: #f6f6f4;
+    --market-canvas: #faf9f6;
     --market-surface: #fff;
-    --market-line: #e7e7e3;
-    --market-radius: 20px;
+    --market-line: #e9e7e2;
+    --market-radius: 16px;
     --market-shadow: 0 12px 36px rgb(24 25 29 / 5%);
     background: var(--market-canvas);
     color: var(--market-ink);
-    font-size: 16px;
+    font-size: 14px;
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
 }
 .rewa-market .aiz-main-wrapper { background: var(--market-canvas) !important; min-height: 100vh; }
-.rewa-market .container, .rewa-market .layout-container { width: 100%; max-width: 1440px; padding-inline: 32px; }
+.rewa-market .container { width: 100%; max-width: 1440px; padding-inline: 32px; }
+.rewa-market .layout-container { width: 100%; max-width: 2560px; padding-inline: 32px; }
 .rewa-market h1, .rewa-market h2, .rewa-market h3, .rewa-market h4, .rewa-market h5 { color: var(--market-ink); letter-spacing: -.035em; line-height: 1.22; }
 .rewa-market a, .rewa-market button { transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease; }
 .rewa-market a:focus-visible, .rewa-market button:focus-visible, .rewa-market input:focus-visible, .rewa-market select:focus-visible, .rewa-market textarea:focus-visible, .rewa-market summary:focus-visible { outline: 3px solid var(--primary); outline-offset: 4px; }
-.rewa-market .btn { border-radius: 999px !important; font-weight: 600; padding: 11px 22px; }
+.rewa-market .btn { border-radius: 12px !important; font-weight: 600; padding: 11px 22px; }
 .rewa-market .btn-icon { padding: 0; min-width: 40px; min-height: 40px; }
 .rewa-market .btn-sm, .rewa-market .btn-xs { padding: 7px 14px; }
 .rewa-market .btn-primary { background: var(--primary); border-color: var(--primary); }
@@ -41,43 +42,88 @@
 .rewa-market .table th { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--market-muted); border-top: 0; }
 .rewa-market .table td, .rewa-market .table th { border-color: var(--market-line); padding: 16px; vertical-align: middle; }
 
-/* Marketplace header: real forms, original dropdowns and configured navigation. */
-.rewa-market .market-header { background: var(--market-surface); }
-.rewa-market .market-header .top-navbar { border-bottom: 1px solid var(--market-line); min-height: 36px; background-color: #f7f7f5; }
-.rewa-market .market-header .logo-bar-area { border-bottom: 1px solid var(--market-line); }
-.rewa-market .market-header .logo-bar-area > div > .d-flex { min-height: 92px; }
-.rewa-market .market-header .front-header-search { max-width: 680px; }
-.rewa-market .market-header .front-header-search form { position: relative; }
-.rewa-market .market-header .search-input-box { width: 100%; }
-.rewa-market .market-header #search { min-height: 50px; border-radius: 999px !important; padding-inline: 22px 60px; background: #f5f5f3; border: 1px solid #deded9; }
-.rewa-market .market-header .search-input-box > svg { display: none; }
-.rewa-market .market-search-submit { position: absolute; inset-inline-end: 6px; top: 6px; width: 38px; height: 38px; border: 0; border-radius: 50%; color: #fff; background: var(--primary); font-size: 22px; display: grid; place-items: center; }
-.rewa-market .market-search-submit:hover { background: var(--hov-primary); }
-.rewa-market .market-header .typed-search-box { border-radius: 18px !important; border: 1px solid var(--market-line); margin-top: 10px; }
-.rewa-market .market-header .bottom-background-color-visibility { border-bottom: 1px solid var(--market-line); }
-.rewa-market .market-header .header_menu_links { font-size: 13px; font-weight: 600; }
-.rewa-market .market-header .header_menu_links.active { color: var(--primary) !important; }
-.rewa-market .market-header .nav-cart-box > a { border: 1px solid var(--market-line); border-radius: 999px; height: 38px !important; margin-block: 6px; }
-.rewa-market .market-header .nav-cart-box svg { color: var(--market-ink) !important; }
-.rewa-market .market-header .nav-cart-box .badge { background: var(--primary); color: #fff; }
+/* Restyle the seven native headers. Their configured colors and controls remain authoritative. */
+.rewa-market .top-navbar {
+    position: relative;
+    overflow: visible;
+    min-height: 36px;
+    border-bottom: 1px solid var(--market-line);
+}
+/* A positioned utility bar lets its existing z-1035 class clear the sticky header.
+   Keep the native z-1 class available while account/offcanvas overlays are open. */
+.rewa-market .top-navbar .dropdown-menu {
+    min-width: 180px;
+    max-width: calc(100vw - 32px);
+    padding: 6px !important;
+    margin-top: 4px;
+}
+.rewa-market .top-navbar .dropdown-menu-right,
+.rewa-market .top-navbar > div > .row > .text-right .dropdown-menu {
+    left: auto;
+    right: 0;
+}
+.rewa-market .top-navbar .dropdown:not(#lang-change):not(#currency-change) > .dropdown-menu,
+.rewa-market .stikcy-header-visibility .dropdown > .dropdown-menu:not(.mega-dropdown-menu) {
+    left: auto;
+    right: auto;
+    inset-inline-start: auto;
+    inset-inline-end: 0;
+    max-width: calc(100vw - 32px);
+}
+.rewa-market[dir="rtl"] .top-navbar > div > .row > .text-right .dropdown-menu,
+[dir="rtl"] .rewa-market .top-navbar > div > .row > .text-right .dropdown-menu {
+    left: 0;
+    right: auto;
+}
+.rewa-market .dropdown-item { border-radius: 8px; padding: 10px 14px; white-space: normal; }
+.rewa-market .stikcy-header-visibility {
+    z-index: 1020;
+    overflow: visible;
+    box-shadow: 0 5px 24px rgb(24 25 29 / 4%);
+}
+.rewa-market .stikcy-header-visibility .logo-bar-area { border-bottom: 1px solid var(--market-line); }
+.rewa-market .stikcy-header-visibility .logo-bar-area > div > .d-flex { min-height: 84px; gap: 4px; }
+.rewa-market .stikcy-header-visibility .front-header-search { min-width: 0; }
+.rewa-market .stikcy-header-visibility .front-header-search form { position: relative; }
+.rewa-market .stikcy-header-visibility .search-input-box { width: 100%; min-width: 0; }
+.rewa-market .stikcy-header-visibility #search {
+    min-height: 48px;
+    border-radius: 12px !important;
+    background: #f7f7f5;
+    border: 1px solid var(--market-line) !important;
+}
+.rewa-market .stikcy-header-visibility .typed-search-box { border-radius: 16px !important; border: 1px solid var(--market-line); margin-top: 8px; max-height: min(65vh, 560px); overflow-y: auto; }
+.rewa-market .stikcy-header-visibility .bottom-background-color-visibility { height: auto !important; min-height: 50px; border-bottom: 1px solid var(--market-line); }
+.rewa-market .stikcy-header-visibility .bottom-background-color-visibility .list-inline,
+.rewa-market .stikcy-header-visibility .nav-menu-list > ul { display: flex; flex-wrap: wrap; }
+.rewa-market .stikcy-header-visibility .header-content-wrapper > div > .d-flex { flex-wrap: wrap !important; }
+.rewa-market .stikcy-header-visibility .header_menu_links { font-size: 13px; font-weight: 600; }
+.rewa-market .stikcy-header-visibility .aiz-user-top-menu { border-radius: 14px; overflow: hidden; }
+.rewa-market .stikcy-header-visibility .nav-cart-box > a { border-radius: 10px; }
+.rewa-market .stikcy-header-visibility .nav-menu-list { min-width: 0; flex-shrink: 1 !important; }
+.rewa-market .stikcy-header-visibility .header-content-wrapper .navbar-logo { max-width: 190px; }
+.rewa-market .stikcy-header-visibility #header-logo-preview { object-fit: contain; max-width: 210px; }
 
 /* New homepage, with merchant imagery and all merchandising controls. */
 .rewa-market .market-home { padding-top: 24px; }
-.rewa-market .market-hero { display: grid; grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); gap: 24px; margin-bottom: 48px; }
-.rewa-market .market-hero-intro { background: #eeeee8; border-radius: 28px; padding: clamp(28px, 4vw, 64px); display: flex; flex-direction: column; align-items: flex-start; justify-content: center; }
+.rewa-market .market-hero { margin-bottom: 40px; }
+.rewa-market .market-hero-intro { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 390px); align-items: center; gap: 32px; padding: 16px 0 28px; }
+.rewa-market .market-hero-copy, .rewa-market .market-hero-discovery { min-width: 0; }
+.rewa-market .market-hero-discovery { justify-self: end; }
 .rewa-market .market-eyebrow { display: block; color: var(--market-muted); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .15em; margin-bottom: 14px; }
-.rewa-market .market-hero h1 { font-size: clamp(34px, 4vw, 62px); font-weight: 700; line-height: 1.05; max-width: 10ch; margin-bottom: 22px; }
-.rewa-market .market-hero-intro > p { font-size: 16px; max-width: 32ch; color: var(--market-muted); margin-bottom: 28px; }
-.rewa-market .market-hero-action { display: inline-flex; align-items: center; justify-content: center; gap: 28px; border-radius: 999px; background: var(--primary); color: #fff; padding: 14px 24px; font-size: 13px; font-weight: 700; }
+.rewa-market .market-hero h1 { font-size: clamp(30px, 3.4vw, 48px); font-weight: 700; line-height: 1.12; max-width: 24ch; margin-bottom: 12px; }
+.rewa-market .market-hero-copy > p { font-size: 15px; max-width: 58ch; color: var(--market-muted); margin-bottom: 0; }
+.rewa-market .market-hero-action { display: inline-flex; align-items: center; justify-content: center; gap: 24px; border-radius: 12px; background: var(--primary); color: #fff; padding: 14px 24px; font-size: 13px; font-weight: 700; }
 .rewa-market .market-hero-action:hover { background: var(--hov-primary); color: #fff; }
 .rewa-market .market-hero-action i { font-size: 20px; }
-.rewa-market .market-hero-topics { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 32px; }
-.rewa-market .market-hero-topics a { border: 1px solid #d5d5ce; border-radius: 999px; padding: 5px 12px; color: var(--market-muted); font-size: 11px; }
+.rewa-market .market-hero-topics { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.rewa-market .market-hero-topics a { border: 1px solid var(--market-line); background: #fff; border-radius: 999px; padding: 7px 12px; color: var(--market-muted); font-size: 12px; }
 .rewa-market .market-hero-topics a:hover { color: var(--primary); border-color: var(--primary); }
-.rewa-market .market-hero-media { min-width: 0; overflow: hidden; border-radius: 28px; background: #eeeee8; }
-.rewa-market .market-hero-slide { display: block; height: clamp(360px, 35vw, 530px); }
-.rewa-market .market-hero-slide img { width: 100%; height: 100%; object-fit: cover; }
-.rewa-market .market-hero-carousel .slick-dots { bottom: 14px; }
+.rewa-market .market-hero-media { min-width: 0; overflow: hidden; border-radius: 20px; background: #f2efe8; }
+.rewa-market .market-hero-slide { display: block; }
+.rewa-market .market-hero-slide img { display: block; width: 100%; height: auto; max-height: 520px; object-fit: contain; }
+.rewa-market .market-hero-carousel .slick-dots { position: static; padding: 10px 0 12px; margin: 0; }
+.rewa-market .market-hero-carousel .slick-arrow { border-radius: 50%; background: #fff; box-shadow: var(--market-shadow); }
 .rewa-market .market-hero-categories { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); height: 100%; gap: 12px; padding: 12px; }
 .rewa-market .market-category-tile { position: relative; min-height: 210px; background: #fff; border-radius: 20px; overflow: hidden; }
 .rewa-market .market-category-tile img { width: 100%; height: 100%; object-fit: cover; }
@@ -91,7 +137,7 @@
 .rewa-market .market-home .carousel-box > .px-3 { padding-inline: 8px !important; }
 .rewa-market .market-home .hot-category-box { border: 1px solid var(--market-line); border-radius: 18px; overflow: hidden; background: #fff; }
 .rewa-market .market-home .fd-banner-container, .rewa-market .market-home .auction-banner-main, .rewa-market .market-home .rounded-2 { border-radius: 18px !important; }
-.rewa-market .market-home .products-wrapper-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 18px; }
+.rewa-market .market-home .products-wrapper-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 20px; }
 .rewa-market .market-section-heading { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; margin-bottom: 28px; }
 .rewa-market .market-section-heading h2 { font-size: 30px; margin: 0; }
 .rewa-market .market-section-heading .market-eyebrow { margin-bottom: 8px; }
@@ -100,9 +146,9 @@
 .rewa-market #backToTop { position: fixed; inset-inline-end: 24px; bottom: 85px; width: 44px; height: 44px; border: 1px solid var(--market-line); border-radius: 50%; background: #fff; box-shadow: var(--market-shadow); z-index: 1000; }
 
 /* Product cards, including shared search/listing, sellers and recommendations. */
-.rewa-market .market-product-card { background: #fff; border-radius: 18px; overflow: hidden; min-width: 0; border: 1px solid transparent; }
-.rewa-market .market-product-card:hover { border-color: var(--market-line); box-shadow: var(--market-shadow); }
-.rewa-market .market-product-card .product-card-wrapper { aspect-ratio: 1; border-radius: 16px !important; background: #f0f0ed; }
+.rewa-market .market-product-card { background: #fff; border-radius: 18px; overflow: hidden; min-width: 0; border: 1px solid var(--market-line); padding: 8px; height: 100%; }
+.rewa-market .market-product-card:hover { border-color: #d5d1c8; box-shadow: var(--market-shadow); }
+.rewa-market .market-product-card .product-card-wrapper { aspect-ratio: 1; border-radius: 12px !important; background: #f7f6f2; }
 .rewa-market .market-product-card .product-card-wrapper img { object-fit: contain; }
 .rewa-market .market-product-card .product-card-wrapper + div { padding: 16px 12px !important; }
 .rewa-market .market-product-card .aiz-card-box { padding: 10px !important; border-radius: 18px; }
@@ -121,8 +167,12 @@
 
 /* The supplied product-detail reference: big gallery, quiet buy panel and pills. */
 .rewa-market .product-details { background: #fff; }
-.rewa-market .product-details > .container > div { padding-block: 40px !important; }
-.rewa-market .product-slider-wrapper { padding-inline-end: 24px; }
+.rewa-market .market-product-detail > .container > div { padding-block: 24px 40px !important; }
+.rewa-market .market-product-breadcrumb { margin-bottom: 24px; color: var(--market-muted); }
+.rewa-market .market-product-breadcrumb .breadcrumb { flex-wrap: wrap; gap: 4px 0; line-height: 1.7; }
+.rewa-market .market-product-breadcrumb .breadcrumb-item { min-width: 0; overflow-wrap: anywhere; }
+.rewa-market .market-product-breadcrumb .breadcrumb-item.active { color: var(--market-muted); }
+.rewa-market .market-product-detail .product-slider-wrapper { position: static; padding-inline-end: 16px; width: 100%; }
 .rewa-market .product-details .main-slider { border-radius: 20px; overflow: hidden; background: #f4f4f1; }
 .rewa-market .product-details .main-slider .swiper-slide { border: 0 !important; border-radius: 20px !important; }
 .rewa-market .product-details .main-slider img { object-fit: contain; }
@@ -142,11 +192,74 @@
 .rewa-market .product-details-nav-tab { background: #fff; border-block: 1px solid var(--market-line); }
 .rewa-market .product-details-nav-tab .nav-link { padding: 20px 16px; font-size: 14px; font-weight: 600; }
 .rewa-market .product-details-nav-tab .nav-link.active { color: var(--market-ink) !important; border-bottom-color: var(--market-ink) !important; }
-.rewa-market .product-details section { scroll-margin-top: 150px; }
+.rewa-market .market-product-detail section { scroll-margin-top: var(--market-scroll-offset, 24px); }
 .rewa-market .product-details #description { color: var(--market-muted); font-size: 16px; line-height: 1.8; }
 .rewa-market .product-details #description img { max-width: 100%; height: auto; }
 .rewa-market .product-details .border-light-gray { border-color: var(--market-line) !important; }
 .rewa-market .product-details .rounded-corner-8px { border-radius: 16px !important; }
+
+/* Gallery and section navigation follow the selected header, including non-sticky layouts. */
+.rewa-market .market-product-detail {
+    --market-gallery-height: clamp(300px, 38vw, 560px);
+}
+.rewa-market .market-product-detail > .container > div > .row > div { min-width: 0; }
+.rewa-market .market-product-detail .main-slider,
+.rewa-market .market-product-detail .product-slider-wrapper .thumb-container {
+    height: var(--market-gallery-height);
+}
+.rewa-market .market-product-detail .thumb-slider .swiper-slide { height: calc((var(--market-gallery-height) - 64px) / 5) !important; }
+.rewa-market .market-product-detail .thumb-slider .swiper-slide img { object-fit: contain; }
+.rewa-market .market-product-detail .main-slider img,
+.rewa-market .market-product-detail .main-slider video { object-fit: contain; }
+.rewa-market .market-product-detail .right-side-cws { flex-wrap: wrap; gap: 12px; min-height: 38px; margin-bottom: 16px; }
+.rewa-market .market-product-detail .border-dashed.rounded-2 { border-style: solid !important; background: #faf9f6; padding: 24px !important; }
+.rewa-market .market-product-detail .aiz-plus-minus { border-radius: 10px !important; background: #fff; }
+.rewa-market .market-product-detail .product-price strong,
+.rewa-market .market-product-detail #chosen_price { font-variant-numeric: tabular-nums; }
+.rewa-market .market-product-detail .nav-tab-header {
+    position: sticky;
+    top: var(--market-sticky-offset, 0px);
+    z-index: 1010;
+    border-bottom: 1px solid var(--market-line);
+}
+.rewa-market .market-product-detail .nav-tab-header > .container { margin-bottom: 0 !important; }
+.rewa-market .market-product-detail .tab-scroll-wrapper { overflow-x: auto; scrollbar-width: thin; }
+.rewa-market .market-product-detail #tabLinks { width: max-content; min-width: 100%; list-style: none; }
+.rewa-market .market-product-detail #tabLinks > li { flex: 0 0 auto; }
+.rewa-market .market-product-detail #tabLinks .nav-link { white-space: nowrap; padding-block: 18px; }
+.rewa-market .market-product-detail #tabLinks .tab-underline { background: var(--primary); }
+.rewa-market .market-product-detail .product-details-nav-tab > .container { gap: 32px; padding-block: 32px 40px; }
+.rewa-market .market-product-detail #description > div { border-radius: 16px; padding: 28px !important; }
+.rewa-market .market-product-detail .aiz-editor-data { overflow-wrap: anywhere; }
+.rewa-market .market-product-detail .aiz-editor-data table { display: block; max-width: 100%; overflow-x: auto; }
+
+@media (min-width: 992px) {
+    .rewa-market .market-product-detail .product-slider-wrapper {
+        position: sticky;
+        top: calc(var(--market-sticky-offset, 0px) + 20px);
+    }
+    .rewa-market .market-product-detail .product-slider-wrapper.market-gallery-static { position: static; }
+}
+@media (max-width: 991.98px) {
+    .rewa-market .market-product-detail .product-slider-wrapper { padding-inline-end: 0; }
+    .rewa-market .stikcy-header-visibility #header-logo-preview { max-width: min(200px, 45vw); }
+    .rewa-market .stikcy-header-visibility .front-header-search { z-index: 5; }
+}
+@media (max-width: 767.98px) {
+    .rewa-market .market-product-detail .main-slider { height: auto; aspect-ratio: 1; }
+    .rewa-market .market-product-detail .product-slider-wrapper .thumb-container { height: 80px; margin-top: 12px; }
+    .rewa-market .market-product-detail .thumb-slider .swiper-slide { height: 80px !important; }
+    .rewa-market .market-product-detail .border-dashed.rounded-2 { padding: 16px !important; }
+    .rewa-market .market-product-detail #description > div { padding: 20px !important; }
+    .rewa-market .market-home .layout-container { width: calc(100% - 32px); }
+    .rewa-market .market-section-heading { align-items: center; flex-wrap: wrap; gap: 12px; }
+    .rewa-market .market-product-card .product-title { font-size: 13px !important; line-height: 1.5; }
+    .rewa-market .product-action-icons { visibility: visible; opacity: 1; }
+    .rewa-market .aiz-mobile-bottom-nav { padding-bottom: env(safe-area-inset-bottom, 0px); }
+    .rewa-market .footer-widget .row.gutters-10 { row-gap: 12px; }
+    .rewa-market .footer-widget .row.gutters-10 > .col-8,
+    .rewa-market .footer-widget .row.gutters-10 > .col-4 { flex: 0 0 100%; max-width: 100%; }
+}
 
 /* Editorial blog: full content, real search/filter, SEO and sharing preserved. */
 .rewa-market .market-journal { padding-block: 56px 72px; }
@@ -203,7 +316,12 @@
 .rewa-market .aiz-main-wrapper > section { padding-block: 40px; }
 .rewa-market .aiz-main-wrapper > section img { max-width: 100%; }
 .rewa-market .aiz-main-wrapper > section.border-top { padding-block: 32px; }
-.rewa-market footer { margin-top: 40px; }
+.rewa-market footer { margin-top: 0; }
+.rewa-market footer h1, .rewa-market footer h2, .rewa-market footer h3, .rewa-market footer h4, .rewa-market footer h5, .rewa-market .footer-widget h1, .rewa-market .footer-widget h2, .rewa-market .footer-widget h3, .rewa-market .footer-widget h4, .rewa-market .footer-widget h5 { color: inherit; letter-spacing: 0; }
+.rewa-market .footer-widget { padding-block: 40px !important; }
+.rewa-market .footer-widget .form-control { min-height: 48px; }
+.rewa-market .footer-widget .btn { min-height: 48px; padding-inline: 12px; }
+.rewa-market .footer-widget img { max-width: 100%; object-fit: contain; }
 .rewa-market footer a { line-height: 1.9; }
 .rewa-market .aiz-mobile-bottom-nav { border-top: 1px solid var(--market-line); box-shadow: 0 -6px 24px rgb(24 25 29 / 5%); }
 
@@ -221,7 +339,7 @@
 .rewa-market.market-auth .img-fit { object-fit: cover; }
 
 @media (min-width: 1440px) {
-    .rewa-market .market-home .layout-container { width: calc(100% - 64px); }
+    .rewa-market .market-home .layout-container { width: calc(100% - 64px); max-width: 1376px; }
 }
 @media (max-width: 1199px) {
     .rewa-market .market-home .products-wrapper-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
@@ -230,29 +348,26 @@
 }
 @media (max-width: 991px) {
     .rewa-market .container, .rewa-market .layout-container { padding-inline: 24px; }
-    .rewa-market .market-hero { grid-template-columns: 1fr 1fr; gap: 16px; }
-    .rewa-market .market-hero-intro { padding: 28px; }
-    .rewa-market .market-hero h1 { font-size: 38px; }
-    .rewa-market .market-hero-slide { height: 420px; }
+    .rewa-market .market-hero-intro { grid-template-columns: minmax(0, 1fr) minmax(0, 320px); gap: 24px; }
+    .rewa-market .market-hero-intro { padding: 12px 0 24px; }
+    .rewa-market .market-hero h1 { font-size: 32px; }
+    .rewa-market .market-hero-slide img { max-height: 480px; }
     .rewa-market .market-home .products-wrapper-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .rewa-market .market-journal-layout { grid-template-columns: 1fr; }
     .rewa-market .market-journal-sidebar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .rewa-market .product-slider-wrapper { padding-inline-end: 0; }
     .rewa-market .aiz-user-panel { padding-inline-start: 0; }
-    .rewa-market .market-header .logo-bar-area > div > .d-flex { flex-wrap: wrap; gap: 8px; padding-bottom: 14px; }
-    .rewa-market .market-header .front-header-search { position: static; order: 10; width: 100%; max-width: none; transform: none; opacity: 1; visibility: visible; padding: 0; margin: 0 !important; }
-    .rewa-market .market-header .front-header-search > div { padding: 0 !important; }
-    .rewa-market .market-header .front-header-search form > .d-flex > .d-lg-none { display: none !important; }
     .rewa-market.market-auth .right-content { margin-top: 0; min-height: auto; }
 }
 @media (max-width: 767px) {
     .rewa-market .container, .rewa-market .layout-container { padding-inline: 16px; }
     .rewa-market .market-home { padding-top: 16px; }
-    .rewa-market .market-hero { grid-template-columns: 1fr; margin-bottom: 28px; }
-    .rewa-market .market-hero-intro { padding: 32px 28px; }
-    .rewa-market .market-hero h1 { font-size: 44px; max-width: 12ch; }
+    .rewa-market .market-hero { margin-bottom: 28px; }
+    .rewa-market .market-hero-intro { grid-template-columns: 1fr; padding: 8px 0 24px; gap: 20px; }
+    .rewa-market .market-hero-discovery { justify-self: start; }
+    .rewa-market .market-hero h1 { font-size: 36px; max-width: 24ch; }
     .rewa-market .market-hero-topics { margin-top: 24px; }
-    .rewa-market .market-hero-slide { height: 280px; }
+    .rewa-market .market-hero-slide img { max-height: none; }
     .rewa-market .market-hero-categories { min-height: 260px; }
     .rewa-market .market-category-tile { min-height: 180px; }
     .rewa-market .market-home .products-wrapper-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
@@ -266,19 +381,19 @@
     .rewa-market .market-story-body p { font-size: 13px; }
     .rewa-market .market-article { padding: 20px; }
     .rewa-market .market-article-body { font-size: 16px; }
-    .rewa-market .product-details > .container > div { padding-block: 24px !important; }
+    .rewa-market .market-product-detail > .container > div { padding-block: 20px 28px !important; }
     .rewa-market .product-details h1 { font-size: 28px !important; }
     .rewa-market .product-details-nav-tab .nav { flex-wrap: nowrap; overflow-x: auto; }
     .rewa-market .product-details-nav-tab .nav-link { white-space: nowrap; }
     .rewa-market .card-body { padding: 20px; }
-    .rewa-market .market-header .top-navbar .list-inline-item { margin-inline-end: 12px; }
+    .rewa-market .top-navbar .list-inline-item { margin-inline-end: 12px; }
     .rewa-market.market-auth .market-auth-home { margin: 16px; }
     .rewa-market.market-auth h1 { font-size: 28px !important; }
 }
 @media (max-width: 479px) {
     .rewa-market .market-story-grid { grid-template-columns: 1fr; }
-    .rewa-market .market-hero h1 { font-size: 38px; }
-    .rewa-market .market-hero-intro { padding: 28px; }
+    .rewa-market .market-hero h1 { font-size: 32px; }
+    .rewa-market .market-hero-intro { padding: 12px 0 24px; }
     .rewa-market .market-product-card .product-card-wrapper + div { padding: 12px 8px !important; }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -286,7 +401,8 @@
 }
 .rewa-market .market-product-card > .product-title { padding-inline: 12px; }
 .rewa-market .market-product-card > p { padding: 0 12px 16px; }
-.rewa-market .market-coupon-banner { padding: 32px; border-radius: 24px; display: flex; align-items: center; justify-content: space-between; gap: 24px; color: #fff; }
+.rewa-market .market-coupon-banner { position: relative; overflow: hidden; isolation: isolate; padding: 32px; border-radius: 20px; display: flex; align-items: center; justify-content: space-between; gap: 24px; color: #fff; }
+.rewa-market .market-coupon-image { position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; object-fit: cover; }
 .rewa-market .market-coupon-banner h2 { color: inherit; font-size: 30px; }
 .rewa-market .market-coupon-banner .market-eyebrow { color: inherit; opacity: .7; }
 .rewa-market .market-coupon-banner p { margin-bottom: 0; }

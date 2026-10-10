@@ -8,20 +8,24 @@
 @endphp
 <section class="market-hero container">
     <div class="market-hero-intro">
-        <span class="market-eyebrow">{{ get_setting('market_hero_eyebrow', null, $lang) ?: translate('Explore RewaShop') }}</span>
-        <h1>{{ get_setting('market_hero_title', null, $lang) ?: translate('Find your next favourite.') }}</h1>
-        <p>{{ get_setting('market_hero_description', null, $lang) ?: translate('Explore products, brands and independent sellers, all in one place.') }}</p>
-        <a class="market-hero-action" href="{{ get_setting('market_hero_link') ?: route('search') }}">
-            {{ get_setting('market_hero_button', null, $lang) ?: translate('Explore the collection') }}
-            <i class="las la-arrow-right" aria-hidden="true"></i>
-        </a>
-        @if (get_setting('enable_hot_categories', 1) == 1 && $hot_categories->count())
-            <div class="market-hero-topics" aria-label="{{ translate('Popular categories') }}">
-                @foreach ($hot_categories->take(4) as $marketCategory)
-                    <a href="{{ route('products.category', $marketCategory->slug) }}">{{ $marketCategory->getTranslation('name') }}</a>
-                @endforeach
-            </div>
-        @endif
+        <div class="market-hero-copy">
+            <span class="market-eyebrow">{{ get_setting('market_hero_eyebrow', null, $lang) ?: translate('Explore RewaShop') }}</span>
+            <h1>{{ get_setting('market_hero_title', null, $lang) ?: translate('Find your next favourite.') }}</h1>
+            <p>{{ get_setting('market_hero_description', null, $lang) ?: translate('Explore products, brands and independent sellers, all in one place.') }}</p>
+        </div>
+        <div class="market-hero-discovery">
+            <a class="market-hero-action" href="{{ get_setting('market_hero_link') ?: route('search') }}">
+                {{ get_setting('market_hero_button', null, $lang) ?: translate('Explore the collection') }}
+                <i class="las la-arrow-right" aria-hidden="true"></i>
+            </a>
+            @if (get_setting('enable_hot_categories', 1) == 1 && $hot_categories->count())
+                <div class="market-hero-topics" aria-label="{{ translate('Popular categories') }}">
+                    @foreach ($hot_categories->take(4) as $marketCategory)
+                        <a href="{{ route('products.category', $marketCategory->slug) }}">{{ $marketCategory->getTranslation('name') }}</a>
+                    @endforeach
+                </div>
+            @endif
+        </div>
     </div>
     <div class="market-hero-media">
         @if (count($marketSliders) || count($marketMobileSliders))
@@ -35,7 +39,7 @@
             </div>
             @endif
             @if (count($marketMobileSliders))
-            <div class="aiz-carousel market-hero-carousel d-md-none" data-items="1" data-arrows="false" data-dots="true" data-autoplay="false" data-infinite="true">
+            <div class="aiz-carousel market-hero-carousel @if(count($marketSliders)) d-md-none @endif" data-items="1" data-arrows="false" data-dots="true" data-autoplay="false" data-infinite="true">
                 @foreach ($marketMobileSliders as $key => $slider)
                     <a href="{{ $marketSliderLinks[$key] ?? route('search') }}" class="market-hero-slide">
                         <img src="{{ $slider ? my_asset($slider->file_name) : static_asset('assets/img/placeholder-rect.jpg') }}" alt="{{ get_setting('website_name') }} {{ translate('collection') }}" @if($key > 0) loading="lazy" @endif>

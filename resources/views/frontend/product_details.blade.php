@@ -61,11 +61,15 @@
         <!--PRODUCT DETAILS TOP SECTION START-->
         <div class="container">
             <div class="pt-30px pb-6">
+                @if(get_setting('homepage_select') === 'market')
+                    @include('frontend.product_details.breadcrumb')
+                @endif
                 <div class="row">
                     <!--LEFT SIDE SLIDER-->
                     <div class="col-sm-12 col-lg-6">
                         <div class="product-slider-wrapper mb-2rem mb-lg-0">
                             <!--BREADCRUMB-->
+                            @if(get_setting('homepage_select') !== 'market')
                             <ul class="breadcrumb bg-transparent pt-0 px-0 pb-10px d-flex align-items-center">
                                 <li class="fs-12 fw-400 has-transition opacity-50 hov-opacity-100">
                                     <a class="text-reset" href="{{ route('home') }}">{{ translate('Home') }}</a>
@@ -82,6 +86,7 @@
                                     }}
                                 </li>
                             </ul>
+                            @endif
                             @include('frontend.product_details.image_gallery')
                         </div>
                     </div>
@@ -488,6 +493,7 @@
                     768: {
                         direction: "vertical",
                         slidesPerView: 5,
+                        spaceBetween: 16,
                     }
                 }
             });
@@ -598,10 +604,13 @@
     <!-- ======================== Product Details Nav Tab Start ================== -->
     <script type="text/javascript">
     document.addEventListener("DOMContentLoaded", function () {
+        // Rewa Market measures the selected header and owns its responsive tab offsets.
+        if (document.body.classList.contains('rewa-market')) return;
         const navLinks = document.querySelectorAll("#tabLinks .nav-link");
         const underline = document.querySelector(".tab-underline");
         const tabWrapper = document.querySelector(".tab-scroll-wrapper");
         const sections = document.querySelectorAll("section");
+        if (!navLinks.length || !underline || !tabWrapper) return;
 
         function moveUnderline(activeLink) {
             const rect = activeLink.getBoundingClientRect();

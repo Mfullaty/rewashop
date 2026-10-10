@@ -49,7 +49,7 @@ $assert(str_contains($sliders, '&lt;New collection&gt;'), 'Merchant intro text m
 $disabled = $render(['enable_hot_categories' => 0], collect([new MarketFixtureCategory()]));
 $assert(!str_contains($disabled, 'market-hero-topics'), 'Disabled hot-category links must stay hidden.');
 $mobileOnly = $render(['small_home_slider_images' => '[2]'], collect());
-$assert(str_contains($mobileOnly, 'slider-2.jpg') && str_contains($mobileOnly, 'market-hero-carousel d-md-none'), 'Mobile-only configuration must render its carousel.');
+$assert(str_contains($mobileOnly, 'slider-2.jpg') && str_contains($mobileOnly, 'market-hero-carousel') && !str_contains($mobileOnly, 'd-md-none'), 'Mobile-only configuration must render its carousel at every size instead of leaving an empty desktop hero.');
 $assert(!str_contains($mobileOnly, 'market-hero-carousel d-none d-md-block') && !str_contains($mobileOnly, 'market-hero-categories'), 'Mobile-only configuration must not render an empty desktop carousel or replace mobile slides with categories.');
 $desktopOnly = $render(['home_slider_images' => '[1]'], collect());
 $assert(substr_count($desktopOnly, 'slider-1.jpg') === 2, 'Desktop slides must remain available as the mobile fallback.');
@@ -63,6 +63,9 @@ $editor = $render($couponSettings, collect(), 'fr', 'backend/website_settings/pa
 $assert(str_contains($editor, 'name="types[][fr]" value="cupon_title"') && str_contains($editor, 'name="types[][fr]" value="cupon_subtitle"'), 'Coupon text must be submitted with its editing language.');
 $assert(str_contains($editor, 'value="Offres &amp; promotions"') && str_contains($editor, 'value="Description française"'), 'Coupon editor must display the selected language.');
 $assert(str_contains($editor, 'name="types[]" value="cupon_background_color"') && str_contains($editor, 'value="#123456"'), 'Coupon background color must remain a global setting.');
+$presentation = $render($couponSettings + ['cupon_text_color' => '#eeeeee', 'coupon_background_image' => 'offer.jpg'], collect(), 'fr', $couponView);
+$assert(str_contains($presentation, 'color: #eeeeee') && str_contains($presentation, '/upload/offer.jpg'), 'Existing coupon image and text-color settings must be honored.');
+$assert(str_contains($editor, 'name="types[]" value="cupon_text_color"') && str_contains($editor, 'name="coupon_background_image"'), 'Coupon presentation settings must be editable.');
 $defaults = $render(['coupon_system' => 1, 'enable_coupon_section' => 1], collect(), 'fr', $couponView);
 $assert(str_contains($defaults, 'Explore our coupons') && str_contains($defaults, 'See the current offers from our sellers.'), 'Missing coupon copy must retain translated defaults.');
 echo "Render checks passed: hero variants/fallbacks, escaping, coupon locales and localized editor fields.\n";

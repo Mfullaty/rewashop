@@ -9,17 +9,10 @@
                 <input type="hidden" name="@if($setting === 'market_hero_link')types[]@else types[][{{ $lang }}]@endif" value="{{ $setting }}">
                 <div class="form-group row">
                     <label class="col-md-3 col-form-label" for="{{ $setting }}">{{ translate($label) }}</label>
-                    <div class="col-md-9"><input class="form-control" id="{{ $setting }}" name="{{ $setting }}" value="{{ get_setting($setting, null, $lang) }}" @if($setting === 'market_hero_link') type="url" @else type="text" @endif></div>
+                    <div class="col-md-9"><input class="form-control" id="{{ $setting }}" name="{{ $setting }}" value="{{ get_setting($setting, null, $setting === 'market_hero_link' ? false : $lang) }}" @if($setting === 'market_hero_link') type="url" @else type="text" @endif></div>
                 </div>
             @endforeach
-            <input type="hidden" name="types[]" value="market_header_mode">
-            <div class="form-group row">
-                <label for="market_header_mode" class="col-md-3 col-form-label">{{ translate('Header layout') }}</label>
-                <div class="col-md-9"><select name="market_header_mode" id="market_header_mode" class="form-control">
-                    <option value="market" @if(get_setting('market_header_mode', 'market') === 'market') selected @endif>{{ translate('Rewa Market header') }}</option>
-                    <option value="selected" @if(get_setting('market_header_mode') === 'selected') selected @endif>{{ translate('Selected dashboard header') }}</option>
-                </select></div>
-            </div>
+            <p class="text-muted">{{ translate('Rewa Market uses your selected Header and Footer layouts. Change them in Website Setup, just like any other theme.') }}</p>
             <div class="text-right"><button type="submit" class="btn btn-primary">{{ translate('Save introduction') }}</button></div>
         </form>
     </div>

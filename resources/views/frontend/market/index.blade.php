@@ -51,11 +51,11 @@
                                             <div class="aiz-carousel arrow-x-0 arrow-inactive-none mt-4 fd-product-slider overflow-hidden"
 
                                                 @if (get_setting('enable_flash_deal') == 1 && get_setting('enable_todays_deal') == 1)
-                                                    data-items="5" data-full-hd-items="5" data-xxl-items="4" data-xl-items="7" data-lg-items="3.5"
+                                                    data-items="5" data-full-hd-items="5" data-xxl-items="4" data-xl-items="3" data-lg-items="3"
                                                 @else
-                                                    data-items="12" data-full-hd-items="12" data-xxl-items="8" data-xl-items="6" data-lg-items="4"
+                                                    data-items="6" data-full-hd-items="6" data-xxl-items="6" data-xl-items="6" data-lg-items="4"
                                                 @endif
-                                                data-md-items="3" data-sm-items="4" data-xs-items="3" data-arrows='false' data-autoplay="true" data-infinite="true">
+                                                data-md-items="3" data-sm-items="2" data-xs-items="2" data-arrows='false' data-autoplay="true" data-infinite="true">
                                                 @foreach ($flash_deal_products as $key => $flash_deal_product)
                                                     @if ($flash_deal_product->product != null && $flash_deal_product->product->published != 0)
                                                         @php
@@ -111,11 +111,11 @@
                                 <div class="aiz-carousel arrow-x-0 arrow-inactive-none  td-product-slider overflow-hidden"
 
                                     @if (get_setting('enable_flash_deal') == 1 && get_setting('enable_todays_deal') == 1)
-                                        data-items="7" data-full-hd-items="7" data-xxl-items="6" data-xl-items="8" data-lg-items="5"
+                                        data-items="5" data-full-hd-items="5" data-xxl-items="4" data-xl-items="3" data-lg-items="3"
                                     @else
-                                        data-items="12" data-full-hd-items="12" data-xxl-items="10" data-xl-items="6" data-lg-items="5"
+                                        data-items="6" data-full-hd-items="6" data-xxl-items="6" data-xl-items="6" data-lg-items="5"
                                     @endif
-                                    data-md-items="4" data-sm-items="4" data-xs-items="3" data-arrows='false'
+                                    data-md-items="3" data-sm-items="2" data-xs-items="2" data-arrows='false'
                                     data-autoplay="true" data-infinite="true">
                                     @if(count($todays_deal_products) > 0)
                                         @foreach ($todays_deal_products as $key => $product)
@@ -650,7 +650,7 @@
                                 <div class="col mt-3 mt-md-0  pre-order-product-wrapper">
                                     <!-- Slider -->
                                     <div class="aiz-carousel arrow-x-0 arrow-inactive-none  custom-product-slider overflow-hidden"
-                                        data-items="7" data-full-hd-items="7" data-xxl-items="4.6" data-xl-items="4.4"
+                                        data-items="5" data-full-hd-items="5" data-xxl-items="4.6" data-xl-items="4.4"
                                         data-lg-items="4" data-md-items="3" data-sm-items="3" data-xs-items="2"
                                         data-arrows='false' data-autoplay="true" data-infinite="true">
                                         @foreach ($newest_preorder_products as $key => $product)
