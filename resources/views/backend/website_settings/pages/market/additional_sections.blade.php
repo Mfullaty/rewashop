@@ -5,10 +5,23 @@
             @csrf
             <input type="hidden" name="types[]" value="enable_coupon_section">
             <div class="form-group row"><label class="col-md-3 col-form-label" for="market-coupons">{{ translate('Coupon section') }}</label><div class="col-md-9"><select class="form-control" id="market-coupons" name="enable_coupon_section"><option value="0">{{ translate('Disabled') }}</option><option value="1" @if(get_setting('enable_coupon_section') == 1) selected @endif>{{ translate('Enabled') }}</option></select><small class="text-muted">{{ translate('The coupon system must also be enabled in feature settings.') }}</small></div></div>
-            @foreach(['cupon_title' => 'Coupon heading', 'cupon_subtitle' => 'Coupon description', 'cupon_background_color' => 'Coupon background color'] as $setting => $label)
-                <input type="hidden" name="{{ $setting === 'cupon_background_color' ? 'types[]' : 'types[][' . $lang . ']' }}" value="{{ $setting }}">
-                <div class="form-group row"><label class="col-md-3 col-form-label" for="market-{{ $setting }}">{{ translate($label) }}</label><div class="col-md-9"><input id="market-{{ $setting }}" name="{{ $setting }}" class="form-control" value="{{ get_setting($setting, null, $setting === 'cupon_background_color' ? false : $lang) }}" type="text"></div></div>
+            @foreach(['cupon_title' => 'Coupon heading', 'cupon_subtitle' => 'Coupon description', 'cupon_background_color' => 'Coupon background color', 'cupon_text_color' => 'Coupon text color'] as $setting => $label)
+                @php $localizedCouponField = in_array($setting, ['cupon_title', 'cupon_subtitle']); @endphp
+                <input type="hidden" name="{{ $localizedCouponField ? 'types[][' . $lang . ']' : 'types[]' }}" value="{{ $setting }}">
+                <div class="form-group row"><label class="col-md-3 col-form-label" for="market-{{ $setting }}">{{ translate($label) }}</label><div class="col-md-9"><input id="market-{{ $setting }}" name="{{ $setting }}" class="form-control" value="{{ get_setting($setting, null, $localizedCouponField ? $lang : false) }}" type="text"></div></div>
             @endforeach
+            <input type="hidden" name="types[][{{ $lang }}]" value="coupon_background_image">
+            <div class="form-group row">
+                <label class="col-md-3 col-form-label">{{ translate('Coupon background image') }}</label>
+                <div class="col-md-9">
+                    <div class="input-group" data-toggle="aizuploader" data-type="image">
+                        <div class="input-group-prepend"><div class="input-group-text bg-soft-secondary">{{ translate('Browse') }}</div></div>
+                        <div class="form-control file-amount">{{ translate('Choose image') }}</div>
+                        <input type="hidden" name="coupon_background_image" class="selected-files" value="{{ get_setting('coupon_background_image', null, $lang) }}">
+                    </div>
+                    <div class="file-preview box sm"></div>
+                </div>
+            </div>
             <button type="submit" class="btn btn-primary">{{ translate('Save coupon section') }}</button>
         </form>
         @foreach([4, 5, 6] as $level)

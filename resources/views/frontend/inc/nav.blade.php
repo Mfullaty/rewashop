@@ -49,11 +49,7 @@
         </button>
     </div>
     @endif
-    @if(get_setting('homepage_select') === 'market' && get_setting('market_header_mode', 'market') !== 'selected')
-        @include('frontend.market.partials.header')
-    @else
-        @include('header.' .get_element_type_by_id(get_setting('header_element')))
-    @endif
+    @include('header.' .get_element_type_by_id(get_setting('header_element')))
 <!-- Top Menu Sidebar -->
 <div class="aiz-top-menu-sidebar collapse-sidebar-wrap sidebar-xl sidebar-left d-lg-none z-1035">
     <div class="overlay overlay-fixed dark c-pointer" data-toggle="class-toggle" data-target=".aiz-top-menu-sidebar"

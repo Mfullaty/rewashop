@@ -20,21 +20,21 @@ Rewa Market combines that marketplace structure with the restrained product pres
 | Secondary hover | Existing dashboard `secondary_base_hov_color` |
 | Ink | #18191d |
 | Muted ink | #626670 |
-| Canvas | #f6f6f4 |
+| Canvas | #faf9f6 |
 | Surface | #ffffff |
-| Border | #e7e7e3 |
-| Radius | 12px controls, 20px cards, 28px hero; pill purchase buttons |
-| Type | Existing dashboard font; 16px body, 1.65 prose line height, compact bold headings |
-| Width | 1440px storefront; 72ch long-form prose |
+| Border | #e9e7e2 |
+| Radius | 12px controls, 16px cards, 20px banners; pill purchase buttons |
+| Type | Existing dashboard font; 14px interface, 16px prose, 1.65 prose line height, compact bold headings |
+| Width | 1440px storefront; native full-width header/footer containers up to 2560px; 72ch long-form prose |
 | Spacing | 4px baseline: 8, 12, 16, 24, 32, 48, 64 |
 | Motion | 160ms hover/focus; respect reduced-motion preferences |
 
 ## Component rules
 
-- Header: three levels, quiet utility row, logo/search/account row, category/menu row. Search remains a real GET form with the existing autocomplete hooks. Support configured menus, logo, sticky setting, full width, language, currency, seller registration, notifications, and cart.
-- Home: editorial introduction plus configured desktop/mobile sliders, then merchant-configured merchandising sections. Preserve every section setting from the Nexa dashboard editor, including banners, categories, sellers, brands, classifieds, auctions, and preorders. Also provide coupon discovery and the additional banner levels 4 to 6 used by older marketplace layouts.
+- Header: use the native dashboard-selected layout, including all seven existing headers. Apply theme styling to its existing markup. Position the utility bar so seller, language, and currency dropdowns clear the sticky header without raising them above modal/sidebar overlays. Search remains a real GET form with the existing autocomplete hooks. Support configured menus, logo, sticky setting, full width, language, currency, seller registration, notifications, and cart.
+- Home: compact editorial introduction above configured desktop/mobile sliders, then merchant-configured merchandising sections. Preserve complete banner artwork with contained, naturally proportioned images. A mobile-only carousel also serves desktop so that configuration never leaves an empty hero. Preserve every section setting from the Nexa dashboard editor, including banners, categories, sellers, brands, classifieds, auctions, and preorders. Also provide coupon discovery and the additional banner levels 4 to 6 used by older marketplace layouts.
 - Products: consistent neutral image surfaces, actual labels, variant selectors, wishlist/compare/cart controls, localized prices, and existing stock/discount/auction logic. Existing listing-card and product-detail templates retain their field and action contracts.
-- Product detail: generous gallery, restrained purchase panel, pill selections, brand-colored primary purchase action, outlined secondary action, visible tabs and readable review surfaces. Preserve video, gallery/zoom, SKU, wholesale tiers, taxes, shipping/warranty/refund information, seller messaging, related products, and addon controls.
+- Product detail: breadcrumb outside the sticky gallery, contained product imagery, restrained purchase panel, pill selections, brand-colored primary purchase action, outlined secondary action, visible tabs and readable review surfaces. Measure the selected sticky header instead of using a fixed 160px gap. Disable gallery stickiness when the viewport is too short. Section links use the measured header and tab height; scrollspy watches only enabled product sections. Empty galleries retain a placeholder, and variant images count toward thumbnail navigation. Preserve video, gallery/zoom, SKU, wholesale tiers, taxes, shipping/warranty/refund information, seller messaging, related products, and addon controls.
 - Blog: editorial heading, image-led two-column story grid, search/category sidebar, readable article with share tools and recent posts. Use the existing SEO metadata and comment configuration.
 - Account, auth, cart, checkout, seller, policy, and custom pages: share the same surfaces, typography, controls, focus treatment, borders, and spacing. Do not alter payment, authentication, or data-handling behavior for visual changes.
 - Mobile: two product columns, stacked hero and detail panes, horizontally scrollable navigation, touch-sized controls. Respect RTL through logical properties and the existing RTL stylesheet.
@@ -43,14 +43,14 @@ Rewa Market combines that marketplace structure with the restrained product pres
 ## Dashboard setup
 
 1. Website Setup → Select Homepage → **Rewa Market** → Save.
-2. Open the homepage editor. Existing merchandising controls remain available. The Rewa Market introduction adds editable eyebrow, title, description, button label/link, and a header mode. Additional marketplace settings configure coupon discovery and banner levels 4 to 6.
-3. Choose **Rewa Market header** for the new marketplace header, or **Selected dashboard header** to retain any currently selected header layout.
+2. Open the homepage editor. Existing merchandising controls remain available. The Rewa Market introduction adds editable eyebrow, title, description, and button label/link fields. Header selection remains in the existing Header editor. Additional marketplace settings configure coupon discovery and banner levels 4 to 6.
+3. Select any existing Header or Footer layout in Website Setup. Rewa Market always renders those native components; it has no custom header or footer. The old `market_header_mode` setting is no longer read and needs no migration.
 4. Configure colors/font, Header, Footer, menus, language/currency, category layouts, and authentication layouts through their existing dashboard screens. The selected footer and mobile navigation are preserved.
 
 No migration, new element IDs, or mandatory seed data are required. Switching back restores the previous theme templates. Uploaded content remains shared by design, just like the other themes.
 
 ## Validation and deployment
 
-The theme's static assets are tracked under `public/assets/css/rewa-market.css`, `public/assets/js/rewa-market.js`, and `public/assets/img/pages/home-market.svg`. Deploy those files despite the repository's existing public-directory ignore rules. Run `php tests/theme-contract.php` for view/configuration contracts and `php tests/compile-market-views.php <path-to-vendor/autoload.php>` when Laravel dependencies are available. The latter compiles and lints changed Blade views without connecting to a production database. Run `php tests/render-market-hero.php <path-to-vendor/autoload.php>` to check the rendered hero with empty, populated, and localized merchant settings.
+The theme's static assets are tracked under `public/assets/css/rewa-market.css`, `public/assets/js/rewa-market.js`, and `public/assets/img/pages/home-market.svg`. Deploy those files despite the repository's existing public-directory ignore rules. Run `php tests/theme-contract.php` for view/configuration contracts and `php tests/compile-market-views.php <path-to-vendor/autoload.php>` when Laravel dependencies are available. The latter compiles and lints changed Blade views without connecting to a production database. Run `php tests/render-market-hero.php <path-to-vendor/autoload.php>` to check the rendered hero with empty, populated, and localized merchant settings. Run `php tests/render-market-gallery.php <path-to-vendor/autoload.php>` for empty, variant-only, digital, and mixed-media galleries.
 
-Before enabling on a live store, verify real product variants, cart/checkout, language/currency, gallery videos, addons, header/footer choices, rich articles, and RTL using the deployed asset bundle and a staging database. The source checkout omits the existing vendor assets and a database, so static/template verification cannot establish live checkout behavior or exact layout against those missing assets.
+Before enabling on a live store, verify real product variants, cart/checkout, language/currency, gallery videos, addons, header/footer choices, rich articles, and RTL using the deployed asset bundle and a staging database. The source checkout omits the existing vendor bundle and a database. The deployed public CSS can be used for isolated layout checks, but full checkout, payment, and authenticated seller flows still require staging data.

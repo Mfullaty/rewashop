@@ -17,8 +17,9 @@ $views = [];
 foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root . '/resources/views')) as $file) {
     if (!$file->isFile() || !str_ends_with($file->getFilename(), '.blade.php')) continue;
     $path = $file->getPathname();
-    if (str_contains($path, '/market/') || str_contains($path, '/auth/') || in_array($path, array_map(fn ($name) => $root . '/resources/views/' . $name . '.blade.php', [
+    if (str_contains($path, '/market/') || str_contains($path, '/auth/') || str_contains($path, '/header/') || str_contains($path, '/footer/') || in_array($path, array_map(fn ($name) => $root . '/resources/views/' . $name . '.blade.php', [
         'frontend/layouts/app', 'frontend/inc/nav', 'frontend/product_details',
+        'frontend/product_details/breadcrumb', 'frontend/product_details/image_gallery',
         'frontend/deliveryboy_login', 'backend/website_settings/select_homepage',
     ]))) $views[] = $path;
 }

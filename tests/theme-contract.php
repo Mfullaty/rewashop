@@ -50,7 +50,12 @@ foreach (array_unique($settings[1]) as $setting) {
     $check(str_contains($marketEditor, 'value="' . $setting . '"'), 'Missing dashboard setting: ' . $setting);
 }
 $nav = $read('resources/views/frontend/inc/nav.blade.php');
-$check(str_contains($nav, 'market_header_mode') && str_contains($nav, "get_element_type_by_id(get_setting('header_element'))"), 'Selected legacy headers must remain available.');
+$check(str_contains($nav, "get_element_type_by_id(get_setting('header_element'))") && !str_contains($nav, 'market_header_mode') && !str_contains($nav, 'frontend.market.partials.header'), 'Every theme must use the selected native header.');
+$check(!is_file($views . 'frontend/market/partials/header.blade.php'), 'Rewa Market must not ship a custom header component.');
+$footer = $read('resources/views/frontend/inc/footer.blade.php');
+$check(str_contains($footer, "get_element_type_by_id(get_setting('footer_element'))"), 'The selected native footer must remain available.');
+$intro = $read('resources/views/backend/website_settings/pages/market/introduction.blade.php');
+$check(!str_contains($intro, 'market_header_mode'), 'The homepage editor must not offer a custom header override.');
 $home = $read('resources/views/frontend/market/index.blade.php');
 $check(str_contains($home, 'let loadMoreLimit = 12;') && str_contains($home, 'page = nextPage;'), 'Newest-products paging must use stable limits and advance only after success.');
 foreach (['css/rewa-market.css', 'js/rewa-market.js', 'img/pages/home-market.svg'] as $asset) {
