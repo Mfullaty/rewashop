@@ -246,8 +246,11 @@
     echo get_setting('header_gtm_script');
 @endphp
 
+    @if(get_setting('homepage_select') === 'market')
+        <link rel="stylesheet" href="{{ static_asset('assets/css/rewa-market.css?v=1') }}">
+    @endif
 </head>
-<body>
+<body @if(get_setting('homepage_select') === 'market') class="rewa-market" @endif>
     <!-- aiz-main-wrapper -->
     <div class="aiz-main-wrapper d-flex flex-column bg-white aiz-{{ get_setting('homepage_select') }}">
         @php
@@ -1589,6 +1592,9 @@
     });
     </script>
 
+    @if(get_setting('homepage_select') === 'market')
+        <script src="{{ static_asset('assets/js/rewa-market.js?v=1') }}" defer></script>
+    @endif
     @yield('script')
 
     @php
