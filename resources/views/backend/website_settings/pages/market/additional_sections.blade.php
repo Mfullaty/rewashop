@@ -10,14 +10,14 @@
                 <input type="hidden" name="{{ $localizedCouponField ? 'types[][' . $lang . ']' : 'types[]' }}" value="{{ $setting }}">
                 <div class="form-group row"><label class="col-md-3 col-form-label" for="market-{{ $setting }}">{{ translate($label) }}</label><div class="col-md-9"><input id="market-{{ $setting }}" name="{{ $setting }}" class="form-control" value="{{ get_setting($setting, null, $localizedCouponField ? $lang : false) }}" type="text"></div></div>
             @endforeach
-            <input type="hidden" name="types[]" value="coupon_background_image">
+            <input type="hidden" name="types[][{{ $lang }}]" value="coupon_background_image">
             <div class="form-group row">
                 <label class="col-md-3 col-form-label">{{ translate('Coupon background image') }}</label>
                 <div class="col-md-9">
                     <div class="input-group" data-toggle="aizuploader" data-type="image">
                         <div class="input-group-prepend"><div class="input-group-text bg-soft-secondary">{{ translate('Browse') }}</div></div>
                         <div class="form-control file-amount">{{ translate('Choose image') }}</div>
-                        <input type="hidden" name="coupon_background_image" class="selected-files" value="{{ get_setting('coupon_background_image') }}">
+                        <input type="hidden" name="coupon_background_image" class="selected-files" value="{{ get_setting('coupon_background_image', null, $lang) }}">
                     </div>
                     <div class="file-preview box sm"></div>
                 </div>

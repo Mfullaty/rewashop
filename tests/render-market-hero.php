@@ -15,7 +15,11 @@ class MarketFixtureCategory
     public function getTranslation(string $key): string { return 'A & B'; }
 }
 $settings = [];
-function get_setting($key, $default = null, $lang = false) { return ($lang ? ($GLOBALS['settings'][$key . ':' . $lang] ?? null) : null) ?? $GLOBALS['settings'][$key] ?? $default; }
+function get_setting($key, $default = null, $lang = false) {
+    $settings = $GLOBALS['settings'];
+    if ($lang && array_key_exists($key . ':' . $lang, $settings)) return $settings[$key . ':' . $lang];
+    return array_key_exists($key, $settings) ? $settings[$key] : $default;
+}
 function csrf_field() { return '<input type="hidden" name="_token" value="test">'; }
 function translate($value) { return $value; }
 function route($name, $value = null) { return '/' . $name . ($value ? '/' . $value : ''); }
@@ -66,6 +70,22 @@ $assert(str_contains($editor, 'name="types[]" value="cupon_background_color"') &
 $presentation = $render($couponSettings + ['cupon_text_color' => '#eeeeee', 'coupon_background_image' => 'offer.jpg'], collect(), 'fr', $couponView);
 $assert(str_contains($presentation, 'color: #eeeeee') && str_contains($presentation, '/upload/offer.jpg'), 'Existing coupon image and text-color settings must be honored.');
 $assert(str_contains($editor, 'name="types[]" value="cupon_text_color"') && str_contains($editor, 'name="coupon_background_image"'), 'Coupon presentation settings must be editable.');
+foreach (['dark' => 'var(--dark, #111723)', 'white' => 'var(--white, #ffffff)'] as $token => $color) {
+    $tokenBanner = $render($couponSettings + ['cupon_text_color' => $token], collect(), 'fr', $couponView);
+    $assert(str_contains($tokenBanner, 'color: ' . $color), 'Legacy coupon color tokens must resolve to the corresponding theme color: ' . $token);
+}
+$localizedImages = $couponSettings + ['coupon_background_image' => null, 'coupon_background_image:en' => 'offer-en.jpg', 'coupon_background_image:fr' => 'offer-fr.jpg'];
+foreach (['en', 'fr'] as $locale) {
+    $localizedBanner = $render($localizedImages, collect(), $locale, $couponView);
+    $assert(str_contains($localizedBanner, '/upload/offer-' . $locale . '.jpg'), 'Coupon backgrounds must use the current language despite a null global row: ' . $locale);
+    $localizedEditor = $render($localizedImages, collect(), $locale, 'backend/website_settings/pages/market/additional_sections');
+    $assert(str_contains($localizedEditor, 'name="types[][' . $locale . ']" value="coupon_background_image"'), 'Coupon image edits must be saved for the current language: ' . $locale);
+    $assert(str_contains($localizedEditor, 'name="coupon_background_image" class="selected-files" value="offer-' . $locale . '.jpg"'), 'Coupon editor must display the current language image: ' . $locale);
+    $assert(!str_contains($localizedEditor, 'name="types[]" value="coupon_background_image"'), 'Coupon image edits must not overwrite the global setting.');
+}
+$clearedImage = $render($couponSettings + ['coupon_background_image' => 'global.jpg', 'coupon_background_image:fr' => null], collect(), 'fr', $couponView);
+$assert(!str_contains($clearedImage, 'market-coupon-image'), 'An explicitly cleared localized coupon image must not fall back to a global image.');
 $defaults = $render(['coupon_system' => 1, 'enable_coupon_section' => 1], collect(), 'fr', $couponView);
 $assert(str_contains($defaults, 'Explore our coupons') && str_contains($defaults, 'See the current offers from our sellers.'), 'Missing coupon copy must retain translated defaults.');
-echo "Render checks passed: hero variants/fallbacks, escaping, coupon locales and localized editor fields.\n";
+$assert(str_contains($defaults, 'color: var(--white, #ffffff)'), 'Missing coupon color settings must retain the white fallback.');
+echo "Render checks passed: hero variants/fallbacks, escaping, coupon color tokens, localized images and editor fields.\n";
