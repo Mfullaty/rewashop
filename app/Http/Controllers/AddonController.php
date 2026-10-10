@@ -22,7 +22,7 @@ class AddonController extends Controller
     public function __construct()
     {
         // Staff Permission Check
-        $this->middleware(['permission:manage_addons'])->only('index', 'create');
+        $this->middleware(['permission:manage_addons'])->only('index', 'create', 'store', 'activation');
     }
 
     /**
@@ -84,8 +84,6 @@ class AddonController extends Controller
     public function store(Request $request)
     {
 
-        Cache::forget('addons');
-
         if (env('DEMO_MODE') == 'On') {
             flash(translate('This action is disabled in demo mode'))->error();
             return back();
@@ -94,15 +92,6 @@ class AddonController extends Controller
         if (class_exists('ZipArchive')) {
             if ($request->hasFile('addon_zip')) {
                 
-                if (! self::isLocalhostDomain()) {
-                    $result = self::check_activation($request);
-
-                    if(isset($result) && $result !== true){
-                        flash($result == false ? 'Please use the same purchase key that you have registered' : $result )->warning();
-                        return back();
-                    }
-                }
-
                 // Create update directory.
                 $dir = 'addons';
                 if (!is_dir($dir))
@@ -140,8 +129,9 @@ class AddonController extends Controller
                         $addon->version = $json['version'];
                         $addon->activated = 1;
                         $addon->image = $json['addon_banner'];
-                        $addon->purchase_code = $request->purchase_code;
+                        $addon->purchase_code = '';
                         $addon->save();
+                        Cache::forget('addons');
 
                         // Create new directories.
                         if (!empty($json['directory'])) {
@@ -185,6 +175,7 @@ class AddonController extends Controller
                         return redirect()->route('addons.index');
                     } else {
                         $addon = Addon::where('unique_identifier', $json['unique_identifier'])->first();
+                        $shouldActivateGst = $addon->unique_identifier === 'gst_system' && ! $addon->activated;
 
                         if ($json['unique_identifier'] == 'delivery_boy' && $addon->version < 3.3) {
                             $dir = base_path('resources/views/delivery_boys');
@@ -235,8 +226,13 @@ class AddonController extends Controller
                         $addon->version = $json['version'];
                         $addon->name = $json['name'];
                         $addon->image = $json['addon_banner'];
-                        $addon->purchase_code = $request->purchase_code;
+                        $addon->activated = 1;
                         $addon->save();
+                        Cache::forget('addons');
+
+                        if ($shouldActivateGst) {
+                            $this->removeProductVat_Unpublish();
+                        }
 
                         flash(translate('This addon is updated successfully'))->success();
                         return redirect()->route('addons.index');
@@ -314,41 +310,6 @@ class AddonController extends Controller
         return 1;
     }
 
-    public function check_activation( $data){
-        $domainPurchaseCode = $data->input('domain_purchase_code');
-        $addonPurchaseCode  = $data->input('purchase_code');
-        
-        // Step 1: Check main item activation 
-        $check_domain_verification =  self::checkVerification('item',$domainPurchaseCode);
-        $check_domain_activation =  self::checkActivation('item',$domainPurchaseCode);
-
-        if (!$check_domain_verification || !$check_domain_activation) {
-            return translate('Please activate your domain at first');
-        }
-
-        // Step 2: Check addon activation 
-        $check_addon_verification =  self::checkVerification('addon',$addonPurchaseCode);
-        $check_addon_activation =  self::checkActivation('addon',$addonPurchaseCode);
-
-        if (!$check_addon_verification || !$check_addon_activation) {
-            return translate('Please activate your addon at first');
-        }
-
-        // Step 3: Get the registered addon using the purchase code
-        $check_registered_addon = self::check_registered_addon($addonPurchaseCode);
-        
-
-        if (!$check_registered_addon) {
-             return translate('This addon is not registered with this domain, please register at first');
-        }
-
-        // if(self::normalizeDomain(($check_registered_addon[0])) == self::normalizeDomain(($_SERVER['SERVER_NAME']))){
-        if (strcasecmp(self::normalizeDomain($check_registered_addon[0]), self::normalizeDomain($_SERVER['SERVER_NAME'])) === 0) {
-            return true;
-        }
-        return false;
-    }
-
     public static function checkVerification( $type, $key){
 
         $res  = self::script_activation_check($key);
@@ -369,13 +330,13 @@ class AddonController extends Controller
 
     public static function sendRequest( $url) {
         $ch = curl_init();
-        
+
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_HTTPGET, true);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-        
+
         $response = curl_exec($ch);
         curl_close($ch);
         return $response;
@@ -403,35 +364,6 @@ class AddonController extends Controller
         return $rn;
     }
 
-
-    public static function check_registered_addon($purchase_code) {
-        $url = "https://activation.activeitzone.com/registered-addon-list/".$purchase_code;
-
-        $ch = curl_init();
-        
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_HTTPGET, true);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-        
-        $response = curl_exec($ch);
-        curl_close($ch);
-        return json_decode($response, true);
-    }
-
-
-    public static function normalizeDomain($domain){
-            $domain = preg_replace('/^https?:\/\//', '', $domain);
-            $domain = preg_replace('/^www\./', '', $domain);
-            $parts = explode('.', $domain);
-            $count = count($parts);
-            if ($count > 2) {
-                $domain = $parts[$count - 2] . '.' . $parts[$count - 1];
-            }
-
-        return $domain;
-    }
 
     public static function isLocalhostDomain() {
         if (isset($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 'localhost') !== false) {
