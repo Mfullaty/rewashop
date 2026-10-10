@@ -1,7 +1,7 @@
 @if(get_setting('coupon_system') == 1 && get_setting('enable_coupon_section') == 1)
 <section class="container mb-5">
     <div class="market-coupon-banner" style="background-color: {{ get_setting('cupon_background_color') ?: '#18191d' }}">
-        <div><span class="market-eyebrow">{{ translate('More ways to save') }}</span><h2>{{ translate(get_setting('cupon_title') ?: 'Explore our coupons') }}</h2><p>{{ translate(get_setting('cupon_subtitle') ?: 'See the current offers from our sellers.') }}</p></div>
+        <div><span class="market-eyebrow">{{ translate('More ways to save') }}</span><h2>{{ get_setting('cupon_title', null, $lang) ?: translate('Explore our coupons') }}</h2><p>{{ get_setting('cupon_subtitle', null, $lang) ?: translate('See the current offers from our sellers.') }}</p></div>
         <a class="btn btn-light" href="{{ route('coupons.all') }}">{{ translate('View all coupons') }} <i class="las la-arrow-right" aria-hidden="true"></i></a>
     </div>
 </section>

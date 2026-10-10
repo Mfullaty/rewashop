@@ -24,7 +24,8 @@
         @endif
     </div>
     <div class="market-hero-media">
-        @if (count($marketSliders))
+        @if (count($marketSliders) || count($marketMobileSliders))
+            @if (count($marketSliders))
             <div class="aiz-carousel market-hero-carousel d-none d-md-block" data-items="1" data-arrows="true" data-dots="true" data-autoplay="false" data-infinite="true">
                 @foreach ($marketSliders as $key => $slider)
                     <a href="{{ $marketSliderLinks[$key] ?? route('search') }}" class="market-hero-slide" @if(!empty($marketSliderColors[$key])) style="background-color: {{ $marketSliderColors[$key] }}" @endif>
@@ -32,6 +33,8 @@
                     </a>
                 @endforeach
             </div>
+            @endif
+            @if (count($marketMobileSliders))
             <div class="aiz-carousel market-hero-carousel d-md-none" data-items="1" data-arrows="false" data-dots="true" data-autoplay="false" data-infinite="true">
                 @foreach ($marketMobileSliders as $key => $slider)
                     <a href="{{ $marketSliderLinks[$key] ?? route('search') }}" class="market-hero-slide">
@@ -39,6 +42,7 @@
                     </a>
                 @endforeach
             </div>
+            @endif
         @else
             <div class="market-hero-categories">
                 @forelse ($featured_categories->take(4) as $marketCategory)

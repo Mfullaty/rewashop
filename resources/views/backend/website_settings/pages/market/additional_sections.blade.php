@@ -6,8 +6,8 @@
             <input type="hidden" name="types[]" value="enable_coupon_section">
             <div class="form-group row"><label class="col-md-3 col-form-label" for="market-coupons">{{ translate('Coupon section') }}</label><div class="col-md-9"><select class="form-control" id="market-coupons" name="enable_coupon_section"><option value="0">{{ translate('Disabled') }}</option><option value="1" @if(get_setting('enable_coupon_section') == 1) selected @endif>{{ translate('Enabled') }}</option></select><small class="text-muted">{{ translate('The coupon system must also be enabled in feature settings.') }}</small></div></div>
             @foreach(['cupon_title' => 'Coupon heading', 'cupon_subtitle' => 'Coupon description', 'cupon_background_color' => 'Coupon background color'] as $setting => $label)
-                <input type="hidden" name="types[]" value="{{ $setting }}">
-                <div class="form-group row"><label class="col-md-3 col-form-label" for="market-{{ $setting }}">{{ translate($label) }}</label><div class="col-md-9"><input id="market-{{ $setting }}" name="{{ $setting }}" class="form-control" value="{{ get_setting($setting) }}" type="text"></div></div>
+                <input type="hidden" name="{{ $setting === 'cupon_background_color' ? 'types[]' : 'types[][' . $lang . ']' }}" value="{{ $setting }}">
+                <div class="form-group row"><label class="col-md-3 col-form-label" for="market-{{ $setting }}">{{ translate($label) }}</label><div class="col-md-9"><input id="market-{{ $setting }}" name="{{ $setting }}" class="form-control" value="{{ get_setting($setting, null, $setting === 'cupon_background_color' ? false : $lang) }}" type="text"></div></div>
             @endforeach
             <button type="submit" class="btn btn-primary">{{ translate('Save coupon section') }}</button>
         </form>
