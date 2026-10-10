@@ -4,7 +4,7 @@
 .env.php
 
 /node_modules
-/public/assets
+# /public/assets
 /public/storage
 /public/uploads
 /storage/*.key
@@ -20,7 +20,7 @@ npm-debug.log
 yarn-error.log
 .DS_Store
 .idea/
-/public/*
+# /public/*
 updates/
 composer.lock
 *.lock
@@ -33,5 +33,5 @@ install.zip
 /public/app-translations
 public/uploads.zip
 .env
-public/all
+# public/all
 
