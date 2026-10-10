@@ -175,6 +175,7 @@ class AddonController extends Controller
                         return redirect()->route('addons.index');
                     } else {
                         $addon = Addon::where('unique_identifier', $json['unique_identifier'])->first();
+                        $shouldActivateGst = $addon->unique_identifier === 'gst_system' && ! $addon->activated;
 
                         if ($json['unique_identifier'] == 'delivery_boy' && $addon->version < 3.3) {
                             $dir = base_path('resources/views/delivery_boys');
@@ -228,6 +229,10 @@ class AddonController extends Controller
                         $addon->activated = 1;
                         $addon->save();
                         Cache::forget('addons');
+
+                        if ($shouldActivateGst) {
+                            $this->removeProductVat_Unpublish();
+                        }
 
                         flash(translate('This addon is updated successfully'))->success();
                         return redirect()->route('addons.index');
