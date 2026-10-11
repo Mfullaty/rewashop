@@ -90,7 +90,7 @@
         var AIZ = AIZ || {};
     </script>
     @if(get_setting('homepage_select') === 'market')
-        <link rel="stylesheet" href="{{ static_asset('assets/css/rewa-market.css?v=2') }}">
+        <link rel="stylesheet" href="{{ static_asset('assets/css/rewa-market.css?v=3') }}">
     @endif
 </head>
 <body @if(get_setting('homepage_select') === 'market') class="rewa-market market-auth" @endif>
