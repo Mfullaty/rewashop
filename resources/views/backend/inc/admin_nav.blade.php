@@ -1,8 +1,8 @@
-<div class="aiz-topbar px-15px px-lg-25px d-flex align-items-stretch justify-content-between">
+<header class="aiz-topbar rewa-admin-topbar px-15px px-lg-25px d-flex align-items-stretch justify-content-between" aria-label="{{ translate('Admin toolbar') }}">
     <div class="d-flex">
         <div class="aiz-topbar-nav-toggler d-flex align-items-center justify-content-start ml-0 mr-2"
             data-toggle="aiz-mobile-nav">
-            <a class="btn btn-topbar has-transition btn-icon p-0 d-flex align-items-center" href="javascript:void(0)">
+            <button type="button" class="btn btn-topbar has-transition btn-icon p-0 d-flex align-items-center" aria-label="{{ translate('Toggle navigation') }}" aria-controls="admin-sidebar" aria-expanded="false" data-admin-sidebar-toggle>
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="8" viewBox="0 0 16 8">
                     <g id="Group_39938" data-name="Group 39938" transform="translate(-278 -30)">
                         <rect id="Rectangle_24892" data-name="Rectangle 24892" width="16" height="2"
@@ -11,21 +11,24 @@
                             transform="translate(278 36)" fill="#232734" />
                     </g>
                 </svg>
-            </a>
+            </button>
         </div>
     </div>
-    <div class="d-flex justify-content-between align-items-stretch flex-grow-1">
-        <div class="d-flex justify-content-around align-items-center align-items-stretch">
+    <div class="rewa-toolbar-content d-flex justify-content-between align-items-stretch flex-grow-1">
+        <div class="rewa-toolbar-start d-flex justify-content-around align-items-center align-items-stretch">
+            <button type="button" class="btn rewa-toolbar-search" data-admin-search aria-label="{{ translate('Search in menu') }}" title="{{ translate('Search in menu') }} (Ctrl K)">
+                <i aria-hidden="true" class="las la-search"></i><span>{{ translate('Search in menu') }}</span><kbd aria-hidden="true">Ctrl K</kbd>
+            </button>
             @canany(['view_product_management_dashboard', 'view_all_orders', 'pos_manager', 'view_promotion_and_offers_dashboard', 'manage_marketing_dashboard', 'manage_marketing_analytics_dashboard', 'view_website_dashboard', 'business_settings'])
                 <div class="d-flex justify-content-around align-items-center align-items-stretch mr-3">
-                    <div class="aiz-topbar-item d-none d-sm-block">
+                    <div class="aiz-topbar-item rewa-quick-menu">
                         <div class="d-flex align-items-center h-100">
                             <a data-toggle="collapse" href="#collapseQuickMenu" role="button" aria-expanded="false"
-                                aria-controls="collapseQuickMenu">
+                                aria-controls="collapseQuickMenu" aria-label="{{ translate('Quick Menu') }}">
                                 <span
                                     class="bg-dark text-white btn-sm d-flex align-items-center rounded-pill hov-svg-white hov-opacity-80 has-transition">
                                     <span class="fw-500 mr-2 mr-0 d-none d-md-block">{{ translate('Quick Menu') }}</span>
-                                    <i class="las la-angle-down fs-14"></i>
+                                    <i aria-hidden="true" class="las la-angle-down fs-14"></i>
                                 </span>
                             </a>
                         </div>
@@ -37,7 +40,7 @@
                     <div class="d-flex align-items-center">
                         <a class="btn btn-topbar has-transition btn-icon btn-circle btn-light p-0 hov-bg-primary hov-svg-white d-flex align-items-center justify-content-center"
                             href="{{ route('poin-of-sales.index') }}" target="_blank" data-toggle="tooltip"
-                            data-title="{{ translate('POS') }}">
+                            data-title="{{ translate('POS') }}" aria-label="{{ translate('POS') }}">
                             <svg xmlns="http://www.w3.org/2000/svg" width="13.79" height="16" viewBox="0 0 13.79 16">
                                 <g id="_371925cdd3f531725a9fa8f3ebf8fe9e" data-name="371925cdd3f531725a9fa8f3ebf8fe9e"
                                     transform="translate(-2.26 0)">
@@ -57,7 +60,7 @@
                     </div>
                 </div>
             @endif
-            <div class="aiz-topbar-item mr-2 d-none d-xl-block">
+            <div class="aiz-topbar-item rewa-toolbar-links mr-2 d-none d-xl-block">
                 <div class="d-flex align-items-center h-100">
                     @can('admin_dashboard')
                         <a class="aiz-topbar-menu fs-13 fw-600 d-flex align-items-center justify-content-center {{ areActiveRoutes(['admin.dashboard']) }}"
@@ -82,16 +85,16 @@
                 </div>
             </div>
         </div>
-        <div class="d-flex justify-content-around align-items-center align-items-stretch">
+        <div class="rewa-toolbar-actions d-flex justify-content-around align-items-center align-items-stretch">
             @canany(['add_new_product', 'add_product_category', 'add_brand'])
                 <div class="d-flex justify-content-around align-items-center align-items-stretch mr-3">
-                    <div class="aiz-topbar-item d-none d-sm-block">
+                    <div class="aiz-topbar-item rewa-toolbar-create">
                         <div class="d-flex align-items-center h-100 dropdown">
                             <a class="dropdown-toggle no-arrow h-100 text-reset" data-toggle="dropdown"
-                                href="javascript:void(0);" role="button" aria-haspopup="false" aria-expanded="false">
+                                href="javascript:void(0);" role="button" aria-haspopup="true" aria-expanded="false" aria-label="{{ translate('Add New') }}">
                                 <span
                                     class="bg-light text-reset hov-text-white hov-bg-blue btn-sm d-flex align-items-center rounded-pill has-transition">
-                                    <i class="las fs-18 la-plus"></i>
+                                    <i aria-hidden="true" class="las fs-18 la-plus"></i>
                                     <span class="fw-500 ml-2 mr-0 d-none d-md-block">{{ translate('Add New') }}</span>
                                 </span>
                             </a>
@@ -99,19 +102,19 @@
                                 style="top: 15px !important;">
                                 @can('add_new_product')
                                     <a href="{{ route('products.create') }}" class="dropdown-item">
-                                        <i class="las la-plus"></i>
+                                        <i aria-hidden="true" class="las la-plus"></i>
                                         <span>{{ translate('New Product') }}</span>
                                     </a>
                                 @endcan
                                 @can('add_product_category')
                                     <a href="{{ route('categories.create') }}" class="dropdown-item">
-                                        <i class="las la-plus"></i>
+                                        <i aria-hidden="true" class="las la-plus"></i>
                                         <span>{{ translate('New Category') }}</span>
                                     </a>
                                 @endcan
                                 @can('add_brand')
                                     <a href="{{ route('brands.create') }}" class="dropdown-item">
-                                        <i class="las la-plus"></i>
+                                        <i aria-hidden="true" class="las la-plus"></i>
                                         <span>{{ translate('New Brand') }}</span>
                                     </a>
                                 @endcan
@@ -124,7 +127,7 @@
                 <div class="d-flex align-items-center">
                     <a class="btn btn-topbar has-transition w-35px h-35px btn-circle p-0 border border-1 border-gray-400 d-flex align-items-center justify-content-center hov-bg-primary hov-svg-white"
                         href="{{ route('home') }}" target="_blank" data-toggle="tooltip"
-                        data-title="{{ translate('Browse Website') }}">
+                        data-title="{{ translate('Browse Website') }}" aria-label="{{ translate('Browse Website') }}">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14.4" height="14.4" viewBox="0 0 14.4 14.4"
                             style="margin-top: 2px;">
                             <path id="_754bac7463b8b1afad8e10a2355d1700" data-name="754bac7463b8b1afad8e10a2355d1700"
@@ -138,7 +141,7 @@
                 <div class="d-flex align-items-center">
                     <a class="btn btn-topbar has-transition w-35px h-35px btn-circle p-0 border border-1 border-gray-400 d-flex align-items-center justify-content-center hov-bg-primary hov-svg-white"
                         href="{{ route('cache.clear') }}" data-toggle="tooltip"
-                        data-title="{{ translate('Clear Cache') }}">
+                        data-title="{{ translate('Clear Cache') }}" aria-label="{{ translate('Clear Cache') }}">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14.576" height="14.576"
                             viewBox="0 0 14.576 14.576">
                             <path id="_74846e5be5db5b666d3893933be03656" data-name="74846e5be5db5b666d3893933be03656"
@@ -204,21 +207,21 @@
             <div class="aiz-topbar-item">
                 <div class="align-items-stretch d-flex dropdown">
                     <a class="dropdown-toggle no-arrow text-dark" data-toggle="dropdown" href="javascript:void(0);"
-                        role="button" aria-haspopup="false" aria-expanded="false">
+                        role="button" aria-haspopup="true" aria-expanded="false" aria-label="{{ translate('Account menu') }}">
                         <span class="d-flex align-items-center">
                             <span class="size-40px rounded-content overflow-hidden border border-2 border-blue">
-                                <img src="{{ uploaded_asset(Auth::user()->avatar_original) }}" class="img-fit"
+                                <img src="{{ uploaded_asset(Auth::user()->avatar_original) }}" class="img-fit" alt="{{ Auth::user()->name }}"
                                     onerror="this.onerror=null;this.src='{{ static_asset('assets/img/avatar-place.png') }}';">
                             </span>
                         </span>
                     </a>
                     <div class="dropdown-menu dropdown-menu-right dropdown-menu-animated dropdown-menu-md">
                         <a href="{{ route('profile.index') }}" class="dropdown-item">
-                            <i class="las la-user-circle"></i>
+                            <i aria-hidden="true" class="las la-user-circle"></i>
                             <span>{{ translate('Profile') }}</span>
                         </a>
                         <a href="{{ route('logout') }}" class="dropdown-item">
-                            <i class="las la-sign-out-alt"></i>
+                            <i aria-hidden="true" class="las la-sign-out-alt"></i>
                             <span>{{ translate('Logout') }}</span>
                         </a>
                         @php
@@ -233,10 +236,10 @@
                                 class="dropdown-item custom-submenu-toggle d-flex align-items-center justify-content-between"
                                 aria-haspopup="true" aria-expanded="false">
                                 <span>
-                                    <i class="las la-language"></i>
+                                    <i aria-hidden="true" class="las la-language"></i>
                                     <span>{{ translate('Language') }}</span>
                                 </span>
-                                <i class="las la-angle-right custom-submenu-arrow"></i>
+                                <i aria-hidden="true" class="las la-angle-right custom-submenu-arrow"></i>
                             </a>
                             <div class="dropdown-menu custom-submenu-nested" id="lang-change">
                                 @foreach (\App\Models\Language::where('status', 1)->get() as $key => $language)
@@ -254,7 +257,7 @@
             </div>
         </div>
     </div>
-</div>
+</header>
 <div class="collapse position-fixed" id="collapseQuickMenu">
     <div class="card mb-0 rounded-0 c-scrollbar-light" style="max-height: 50vh; overflow-y: auto;">
         <div class="card-body p-xl-5">

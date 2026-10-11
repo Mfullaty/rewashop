@@ -1,40 +1,24 @@
 <div class="aiz-sidebar-wrap">
-    <div class="aiz-sidebar left" style="background-color: {{ get_setting('navbar_bg_color') }}">
+    <aside class="aiz-sidebar left" id="admin-sidebar" aria-label="{{ translate('Administration navigation') }}" style="background-color: {{ get_setting('navbar_bg_color') ?: (get_setting('navbar_text_color') == 'white' ? '#202438' : '#ffffff') }}">
         <div class="aiz-side-nav-logo-wrap">
-            <a href="{{ route('admin.dashboard') }}" class="d-block text-left"
-                style="background-color: {{ get_setting('navbar_bg_color') }}">
+            <a href="{{ route('admin.dashboard') }}" class="rewa-admin-brand" style="background-color: {{ get_setting('navbar_bg_color') ?: (get_setting('navbar_text_color') == 'white' ? '#202438' : '#ffffff') }}">
                 @if(get_setting('system_logo_black') != null)
-                    <img class="mw-100" src="{{ uploaded_asset(get_setting('system_logo_black')) }}" class="brand-icon"
-                        alt="{{ get_setting('site_name') }}">
+                    <img class="mw-100 brand-icon" src="{{ uploaded_asset(get_setting('system_logo_black')) }}" alt="{{ get_setting('site_name') }}">
                 @else
-                    <img class="mw-100" src="{{ static_asset('assets/img/logo.png') }}" class="brand-icon"
-                        alt="{{ get_setting('site_name') }}">
+                    <img class="mw-100 brand-icon" src="{{ static_asset('assets/img/logo.png') }}" alt="{{ get_setting('site_name') }}">
                 @endif
+                <span class="rewa-workspace-label">{{ translate('Admin workspace') }}</span>
             </a>
+            <button type="button" class="rewa-sidebar-close" aria-label="{{ translate('Close navigation') }}" data-admin-sidebar-close><i class="las la-times" aria-hidden="true"></i></button>
         </div>
-        <div class="aiz-side-nav-wrap">
-            <div class="px-3 mb-3 position-relative" style="color: {{ get_setting('navbar_text_color') }}">
-                <input 
-                    class="form-control bg-transparent rounded-2 form-control-sm fs-14 menu-search-input" 
-                    type="text" 
-                    @if (get_setting('navbar_text_color') == 'black') 
-                        style="border: 1px solid rgba(0, 0, 0, 0.3); color: {{ get_setting('navbar_text_color') }};" 
-                    @elseif(get_setting('navbar_text_color') == 'white') 
-                        style="border: 1px solid rgba(255, 255, 255, 0.3);  color: {{ get_setting('navbar_text_color') }};"
-                    @endif
-                    name="" 
-                    placeholder="{{ translate('Search in menu') }}" 
-                    id="menu-search" 
-                    onkeyup="menuSearch()" 
-                >
-                <span class="absolute-top-right pr-3 mr-3" style="margin-top: 10px;">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
-                        <path id="search_FILL0_wght200_GRAD0_opsz20"
-                            d="M176.921-769.231l6.255-6.255a5.99,5.99,0,0,0,1.733.949,5.687,5.687,0,0,0,1.885.329,5.317,5.317,0,0,0,3.9-1.608,5.31,5.31,0,0,0,1.609-3.9,5.322,5.322,0,0,0-1.608-3.9,5.306,5.306,0,0,0-3.9-1.611,5.321,5.321,0,0,0-3.9,1.609,5.312,5.312,0,0,0-1.611,3.9,5.554,5.554,0,0,0,.35,1.946,6.043,6.043,0,0,0,.929,1.672l-6.255,6.255Zm9.874-5.82a4.51,4.51,0,0,1-3.317-1.352,4.51,4.51,0,0,1-1.352-3.317,4.51,4.51,0,0,1,1.352-3.317,4.51,4.51,0,0,1,3.317-1.352,4.51,4.51,0,0,1,3.317,1.352,4.51,4.51,0,0,1,1.352,3.317,4.51,4.51,0,0,1-1.352,3.317A4.51,4.51,0,0,1,186.8-775.051Z"
-                            transform="translate(-176.307 785.231)" fill="{{ get_setting('navbar_text_color') }}" />
-                    </svg>
-                </span>
-            </div>
+        <div class="rewa-menu-search">
+            <label for="menu-search" class="sr-only">{{ translate('Search in menu') }}</label>
+            <i class="las la-search" aria-hidden="true"></i>
+            <input class="form-control bg-transparent menu-search-input" type="search" placeholder="{{ translate('Search in menu') }}" id="menu-search" oninput="menuSearch()" autocomplete="off" aria-controls="search-menu main-menu">
+            <kbd class="rewa-menu-shortcut" aria-hidden="true">Ctrl K</kbd>
+        </div>
+        <nav class="aiz-side-nav-wrap" aria-label="{{ translate('Admin sections') }}">
+            <p id="menu-search-empty" class="rewa-menu-empty" role="status" hidden>{{ translate('Nothing Found') }}</p>
             <ul class="aiz-side-nav-list" id="search-menu"></ul>
             <ul class="aiz-side-nav-list" id="main-menu" data-toggle="aiz-side-menu">
 
@@ -3060,7 +3044,8 @@
                     </li>
                 @endif
             </ul>
-        </div>
-    </div>
+        </nav>
+        <div class="rewa-sidebar-footer"><span class="rewa-workspace-dot" aria-hidden="true"></span><span>{{ get_setting('site_name') }}</span><span class="rewa-sidebar-version">v{{ get_setting('current_version') }}</span></div>
+    </aside>
     <div class="aiz-sidebar-overlay"></div>
 </div>
