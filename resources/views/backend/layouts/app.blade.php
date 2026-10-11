@@ -131,6 +131,7 @@
             border-bottom-right-radius: 4px !important;
         }
     </style>
+    <link rel="stylesheet" href="{{ static_asset('assets/css/rewa-admin.css?v=1') }}">
     <script>
         var AIZ = AIZ || {};
         AIZ.local = {
@@ -163,19 +164,22 @@
 
 </head>
 
-<body class="">
+<body class="rewa-admin">
+
+    <a class="rewa-skip-link" href="#admin-content">{{ translate('Skip to content') }}</a>
 
     <div class="aiz-main-wrapper">
         @include('backend.inc.admin_sidenav')
         <div class="aiz-content-wrapper bg-white">
             @include('backend.inc.admin_nav')
             <div class="aiz-main-content">
-                <div class="px-15px px-lg-25px">
+                <main class="rewa-admin-page px-15px px-lg-25px" id="admin-content" tabindex="-1">
                     @yield('content')
-                </div>
-                <div class="bg-white text-center py-3 px-15px px-lg-25px mt-auto border-top">
+                </main>
+                <footer class="rewa-admin-footer bg-white py-3 px-15px px-lg-25px mt-auto border-top">
                     <p class="mb-0">&copy; {{ get_setting('site_name') }} v{{ get_setting('current_version') }}</p>
-                </div>
+                    <a href="{{ route('home') }}" target="_blank" rel="noopener">{{ translate('View storefront') }} <i class="las la-external-link-alt" aria-hidden="true"></i></a>
+                </footer>
             </div><!-- .aiz-main-content -->
         </div><!-- .aiz-content-wrapper -->
     </div><!-- .aiz-main-wrapper -->
@@ -233,35 +237,24 @@
         }
 
         function menuSearch() {
-            var filter, item;
-            filter = $("#menu-search").val().toUpperCase();
-            items = $("#main-menu").find("a");
-            items = items.filter(function(i, item) {
-                if ($(item).find(".aiz-side-nav-text")[0].innerText.toUpperCase().indexOf(filter) > -1 && $(item)
-                    .attr('href') !== '#') {
-                    return item;
-                }
+            var filter = $('#menu-search').val().trim().toLocaleUpperCase();
+            var results = $('#search-menu').empty();
+            var matches = $('#main-menu a').filter(function() {
+                var label = $(this).find('.aiz-side-nav-text').text().trim();
+                var href = $(this).attr('href');
+                return label && href && href !== '#' && !/^javascript:/i.test(href) &&
+                    label.toLocaleUpperCase().indexOf(filter) !== -1;
             });
-
-            if (filter !== '') {
-                $("#main-menu").addClass('d-none');
-                $("#search-menu").html('')
-                if (items.length > 0) {
-                    for (i = 0; i < items.length; i++) {
-                        const text = $(items[i]).find(".aiz-side-nav-text")[0].innerText;
-                        const link = $(items[i]).attr('href');
-                        $("#search-menu").append(
-                            `<li class="aiz-side-nav-item"><a href="${link}" class="aiz-side-nav-link"><i class="las la-ellipsis-h aiz-side-nav-icon"></i><span style="color: {{ get_setting('navbar_text_color') }}">${text}</span></a></li`
-                            );
-                    }
-                } else {
-                    $("#search-menu").html(
-                        `<li class="aiz-side-nav-item"><span class="text-center d-block" style="color: {{ get_setting('navbar_text_color') }}">{{ translate('Nothing Found') }}</span></li>`
-                        );
-                }
-            } else {
-                $("#main-menu").removeClass('d-none');
-                $("#search-menu").html('')
+            $('#main-menu').toggleClass('d-none', filter !== '');
+            $('#menu-search-empty').prop('hidden', !filter || matches.length > 0);
+            if (filter) {
+                matches.each(function() {
+                    // Clone only links already rendered for this user's permissions.
+                    var link = $(this).clone().removeAttr('id aria-expanded').removeClass('has-arrow');
+                    link.find('[id]').removeAttr('id');
+                    link.find('.aiz-side-nav-arrow').remove();
+                    $('<li class="aiz-side-nav-item"></li>').append(link).appendTo(results);
+                });
             }
         }
 
@@ -1502,6 +1495,7 @@
         });
 
     </script>
+    <script src="{{ static_asset('assets/js/rewa-admin.js?v=1') }}"></script>
 </body>
 
 </html>

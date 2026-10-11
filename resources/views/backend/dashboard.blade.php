@@ -1,6 +1,7 @@
 @extends('backend.layouts.app')
 
 @section('content')
+    <div class="rewa-dashboard">
     @if (auth()->user()->can('smtp_settings') && env('MAIL_USERNAME') == null && env('MAIL_PASSWORD') == null)
         <div class="">
             <div class="alert alert-info d-flex align-items-center">
@@ -12,31 +13,34 @@
             </div>
         </div>
     @endif
-    <div class="d-flex align-items-center justify-content-between mb-4">
+    <div class="rewa-page-intro">
         <div>
-            <h2 class="fs-18 fw-600 text-dark mb-1">{{ translate('Dashboard') }}</h2>
-            <span class="fs-12 fw-400 text-dark">{{ translate('Central hub of your business') }}</span>
+            <span class="rewa-eyebrow">{{ translate('Your marketplace') }}</span>
+            <h1>{{ translate('Dashboard') }}</h1>
+            <p>{{ translate('A clear view of your store, sales and community.') }}</p>
         </div>
-        <div class="d-flex align-items-center">
-            <div
-                class="fs-16 fw-bold d-flex align-items-center justify-content-center w-40px h-40px rounded-circle bg-light mr-2">
-                {{ now()->format('d') }}</div>
-            <span class="fs-12 fw-400">{{ now()->format('l') }}</span>
-            <span class="fs-12 fw-400">{{ now()->format(', F Y') }}</span>
+        <div class="rewa-intro-actions">
+            <div class="rewa-date-chip"><i class="las la-calendar-alt" aria-hidden="true"></i><time datetime="{{ now()->format('Y-m-d') }}">{{ now()->format('M j, Y') }}</time></div>
+            @can('view_all_orders')
+                <a href="{{ route('all_orders.index') }}" class="btn btn-outline-primary"><i class="las la-receipt" aria-hidden="true"></i> {{ translate('View orders') }}</a>
+            @endcan
+            @can('add_new_product')
+                <a href="{{ route('products.create') }}" class="btn btn-primary"><i class="las la-plus" aria-hidden="true"></i> {{ translate('Add product') }}</a>
+            @endcan
         </div>
     </div>
     @can('admin_dashboard')
-        <div class="row gutters-16">
-            <div class="col-lg-6">
+        <div class="row gutters-16 rewa-dashboard-overview">
+            <div class="col-12 rewa-overview-metrics">
                 <div class="row gutters-16">
-                    <div class="col-sm-6">
-                        <div class="dashboard-box h-220px mb-2rem overflow-hidden bg-white">
+                    <div class="col-sm-6 col-xl-3">
+                        <div class="dashboard-box rewa-metric-card h-220px mb-2rem overflow-hidden bg-white">
                             <div class="d-flex flex-column justify-content-between h-100">
                                 <div class="d-flex justify-content-between">
                                     <div>
-                                        <h1 class="fs-30 fw-600 text-dark mb-1">
+                                        <h3 class="fs-30 fw-600 text-dark mb-1">
                                             {{ $total_customers }}
-                                        </h1>
+                                        </h3>
                                         <h3 class="fs-13 fw-400 text-reset mb-0">{{ translate('Registered Customer') }}</h3>
                                     </div>
                                     <div class="mt-2">
@@ -70,12 +74,12 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-sm-6">
-                        <div class="dashboard-box h-220px mb-2rem overflow-hidden bg-white">
+                    <div class="col-sm-6 col-xl-3">
+                        <div class="dashboard-box rewa-metric-card h-220px mb-2rem overflow-hidden bg-white">
                             <div class="d-flex flex-column justify-content-between h-100">
                                 <div class="d-flex justify-content-between">
                                     <div>
-                                        <h1 class="fs-30 fw-600 text-dark mb-1">{{ $total_products }}</h1>
+                                        <h3 class="fs-30 fw-600 text-dark mb-1">{{ $total_products }}</h3>
                                         <h3 class="fs-13 fw-400 text-reset mb-0">{{ translate('Total Products') }}</h3>
                                     </div>
                                     <div class="mt-2">
@@ -108,12 +112,12 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-sm-6">
-                        <div class="dashboard-box h-220px mb-2rem overflow-hidden bg-white">
+                    <div class="col-sm-6 col-xl-3">
+                        <div class="dashboard-box rewa-metric-card h-220px mb-2rem overflow-hidden bg-white">
                             <div class="d-flex flex-column justify-content-between h-100">
                                 <div class="d-flex justify-content-between">
                                     <div>
-                                        <h1 class="fs-30 fw-600 text-dark mb-1">{{ $total_categories }}</h1>
+                                        <h3 class="fs-30 fw-600 text-dark mb-1">{{ $total_categories }}</h3>
                                         <h3 class="fs-13 fw-400 text-reset mb-0">{{ translate('Total Category') }}</h3>
                                     </div>
                                     <div class="mt-2">
@@ -161,12 +165,12 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-sm-6">
-                        <div class="dashboard-box h-220px mb-2rem overflow-hidden bg-white">
+                    <div class="col-sm-6 col-xl-3">
+                        <div class="dashboard-box rewa-metric-card h-220px mb-2rem overflow-hidden bg-white">
                             <div class="d-flex flex-column justify-content-between h-100">
                                 <div class="d-flex justify-content-between">
                                     <div>
-                                        <h1 class="fs-30 fw-600 text-dark mb-1">{{ $total_brands }}</h1>
+                                        <h3 class="fs-30 fw-600 text-dark mb-1">{{ $total_brands }}</h3>
                                         <h3 class="fs-13 fw-400 text-reset mb-0">{{ translate('Total Brands') }}</h3>
                                     </div>
                                     <div class="mt-2">
@@ -211,18 +215,17 @@
                     </div>
                 </div>
             </div>
-            <div class="col-lg-6">
+            <div class="col-12 rewa-overview-commerce">
                 <div class="row gutters-16">
-                    <div class="col-sm-6">
+                    <div class="col-md-8">
                         <div
-                            class="dashboard-box mb-2rem overflow-hidden bg-white"
-                            style="height: 470px;"
+                            class="dashboard-box rewa-sales-card mb-2rem bg-white"
                         >
                             <div class="d-flex flex-column justify-content-between h-100">
                                 <div>
-                                    <h1 class="fs-30 fw-600 text-dark mb-1">
+                                    <h3 class="fs-30 fw-600 text-dark mb-1">
                                         {{ number_format_short($total_sale) }}
-                                    </h1>
+                                    </h3>
                                     <h3 class="fs-13 fw-400 text-reset mb-0">{{ translate('All Time Sales') }}</h3>
                                 </div>
                                 <div
@@ -241,7 +244,7 @@
                                     class="w-100"
                                     style="box-sizing: border-box;"
                                 >
-                                    <div style="width: 100%; height: 140px; position: relative;">
+                                    <div class="rewa-sales-chart">
                                         <canvas id="graph-3"></canvas>
                                     </div>
                                 </div>
@@ -271,17 +274,16 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-sm-6">
+                    <div class="col-md-4">
                         <div
-                            class="dashboard-box mb-2rem overflow-hidden bg-white"
-                            style="height: 470px;"
+                            class="dashboard-box rewa-sellers-card mb-2rem bg-white"
                         >
                             @if (get_setting('vendor_system_activation') == 1)
                                 <div class="d-flex flex-column justify-content-between h-100">
                                     <div>
-                                        <h1 class="fs-30 fw-600 text-dark mb-1">
+                                        <h3 class="fs-30 fw-600 text-dark mb-1">
                                             {{ $total_sellers }}
-                                        </h1>
+                                        </h3>
                                         <h3 class="fs-13 fw-400 text-reset mb-0">
                                             {{ translate('Sellers in the Platform') }}</h3>
                                     </div>
@@ -734,18 +736,18 @@
                         </div>
                     </div>
                     <div>
-                        <h1 class="fs-20 fw-bold text-dark mb-1">
+                        <h3 class="fs-20 fw-bold text-dark mb-1">
                             {{ single_price($total_inhouse_sale) }}
-                        </h1>
+                        </h3>
                         <h4 class="fs-13 fw-400 text-reset mb-0">{{ translate('Total Sales') }}</h4>
                     </div>
                     <div class="row gutters-5 mt-4">
                         <div class="col-lg-4">
                             <div class="card card-no-shadow bg-soft-light h-lg-130px h-xl-auto border-0">
                                 <div class="card-body">
-                                    <h1 class="fs-20 fw-bold text-dark">
+                                    <h3 class="fs-20 fw-bold text-dark">
                                         {{ $total_inhouse_order }}
-                                    </h1>
+                                    </h3>
                                     <p class="fs-13 fw-500 text-dark mb-0">{{ translate('Total Orders') }}</p>
                                 </div>
                             </div>
@@ -753,9 +755,9 @@
                         <div class="col-lg-4">
                             <div class="card card-no-shadow bg-light h-lg-130px h-xl-auto border-0">
                                 <div class="card-body">
-                                    <h1 class="fs-20 fw-bold text-dark">
+                                    <h3 class="fs-20 fw-bold text-dark">
                                         {{ $total_inhouse_products }}
-                                    </h1>
+                                    </h3>
                                     <p class="fs-13 fw-500 text-dark mb-0">{{ translate('In-house product') }}</p>
                                 </div>
                             </div>
@@ -763,9 +765,9 @@
                         <div class="col-lg-4">
                             <div class="card card-no-shadow bg-light h-lg-130px h-xl-auto border-0">
                                 <div class="card-body">
-                                    <h1 class="fs-20 fw-bold text-dark">
+                                    <h3 class="fs-20 fw-bold text-dark">
                                         {{ number_format($inhouse_product_rating, 2) }}
-                                    </h1>
+                                    </h3>
                                     <p class="fs-13 fw-500 text-dark mb-0">{{ translate('Ratings') }}</p>
                                 </div>
                             </div>
@@ -1274,6 +1276,7 @@
             </div>
         </div>
     @endcan
+    </div>
 @endsection
 @section('script')
     @include('backend.dashboard.dashboard_js')
@@ -1293,12 +1296,12 @@
                             {{ $row[0]->total ?? 0 }},
                         @endforeach
                     ],
-                    backgroundColor: '#0B80FD',
+                    backgroundColor: '#5b56e8',
                     borderWidth: 0,
-                    borderRadius: 2,
+                    borderRadius: 5,
                     borderSkipped: 'bottom',
-                    barThickness: 8,
-                    maxBarThickness: 8,
+                    barThickness: 'flex',
+                    maxBarThickness: 24,
                     minBarLength: 2
                 }]
             },
@@ -1328,15 +1331,17 @@
                 },
                 scales: {
                     x: {
-                        display: false,
+                        display: true,
+                        ticks: { color: '#7b8194', font: { size: 11 }, maxRotation: 0 },
                         grid: {
                             display: false
                         }
                     },
                     y: {
-                        display: false,
+                        display: true,
+                        ticks: { color: '#7b8194', font: { size: 11 }, maxTicksLimit: 5 },
                         grid: {
-                            display: false
+                            color: '#f0f1f6', drawBorder: false
                         },
                         beginAtZero: true
                     }
