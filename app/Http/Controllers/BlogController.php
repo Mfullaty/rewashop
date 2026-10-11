@@ -166,12 +166,13 @@ class BlogController extends Controller
 
     public function all_blog(Request $request)
     {
+        $request->validate(['search' => 'nullable|string|max:150', 'selected_categories' => 'nullable|array', 'selected_categories.*' => 'string|max:255']);
         $selected_categories = array();
         $search = null;
-        $blogs = Blog::query();
+        $blogs = Blog::with('category');
 
-        if ($request->has('search')) {
-            $search = $request->search;;
+        if ($request->filled('search')) {
+            $search = trim($request->input('search'));
             $blogs->where(function ($q) use ($search) {
                 foreach (explode(' ', trim($search)) as $word) {
                     $q->where('title', 'like', '%' . $word . '%')
@@ -183,13 +184,13 @@ class BlogController extends Controller
             $case2 = '%' . $search . '%';
 
             $blogs->orderByRaw("CASE 
-                WHEN title LIKE '$case1' THEN 1 
-                WHEN title LIKE '$case2' THEN 2 
+                WHEN title LIKE ? THEN 1
+                WHEN title LIKE ? THEN 2
                 ELSE 3 
-                END");
+                END", [$case1, $case2]);
         }
 
-        if ($request->has('selected_categories')) {
+        if ($request->filled('selected_categories')) {
             $selected_categories = $request->selected_categories;
             $blog_categories = BlogCategory::whereIn('slug', $selected_categories)->pluck('id')->toArray();
 
@@ -198,15 +199,15 @@ class BlogController extends Controller
 
         $blogs = $blogs->where('status', 1)->orderBy('created_at', 'desc')->paginate(12);
 
-        $recent_blogs = Blog::where('status', 1)->orderBy('created_at', 'desc')->limit(9)->get();
+        $recent_blogs = Blog::with('category')->where('status', 1)->orderBy('created_at', 'desc')->limit(9)->get();
 
         return view(get_setting('homepage_select') === 'market' ? 'frontend.market.blog.listing' : 'frontend.blog.listing', compact('blogs', 'selected_categories', 'search', 'recent_blogs'));
     }
 
     public function blog_details($slug)
     {
-        $blog = Blog::where('slug', $slug)->first();
-        $recent_blogs = Blog::where('status', 1)->orderBy('created_at', 'desc')->limit(9)->get();
+        $blog = Blog::with('category')->where('status', 1)->where('slug', $slug)->firstOrFail();
+        $recent_blogs = Blog::with('category')->where('status', 1)->orderBy('created_at', 'desc')->limit(9)->get();
         return view(get_setting('homepage_select') === 'market' ? 'frontend.market.blog.details' : 'frontend.blog.details', compact('blog', 'recent_blogs'));
     }
 

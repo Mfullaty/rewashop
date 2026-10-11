@@ -397,7 +397,7 @@
                                                 oninput="search()"
                                                 name="keyword"
                                                 @isset($query) value="{{ $query }}" @endisset
-                                                placeholder="What do you want to shop today…!"
+                                                placeholder="{{ translate('Search products and brands') }}"
                                                 autocomplete="off">
 
                                         </div>

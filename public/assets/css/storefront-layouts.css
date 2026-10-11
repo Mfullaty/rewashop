@@ -1,0 +1,100 @@
+/* Opt-in skins for native layouts. display:contents keeps sticky headers in the page containing block. */
+.rewa-chrome { display: contents; }
+.rewa-chrome .container { max-width: 1440px; }
+.rewa-chrome .layout-container { width: 100%; max-width: 2560px; }
+.rewa-chrome .stikcy-header-visibility { overflow: visible; box-shadow: 0 6px 24px rgb(32 37 31 / 4%); }
+.rewa-chrome .dropdown-menu { border: 1px solid #e3e4dd; border-radius: 14px; box-shadow: 0 16px 48px rgb(32 37 31 / 12%); padding: 12px; z-index: 1040; max-width: calc(100vw - 24px); }
+.rewa-chrome .mega-dropdown-menu { border-radius: 0 0 18px 18px; }
+.rewa-chrome .dropdown-item { border-radius: 6px; white-space: normal; overflow-wrap: anywhere; font-size: 13px; }
+.rewa-chrome .dropdown-item:hover { background: #f4f2ec; color: #20251f; }
+.rewa-chrome button:focus-visible, .rewa-chrome a:focus-visible { outline: 3px solid var(--primary, #e62e04); outline-offset: 3px; }
+.rewa-chrome .nav-cart-box .dropdown-menu { inset-inline-start: auto; inset-inline-end: 0; }
+
+/* Atelier: centred brand, quiet navigation, compact controls and roomy borders. */
+.rewa-header-atelier .header-content-wrapper { padding-block: 22px !important; }
+.rewa-header-atelier .navbar-logo { max-width: 190px; }
+.rewa-header-atelier #header-logo-preview { max-width: 190px; max-height: 42px; object-fit: contain; }
+.rewa-header-atelier .header-right-content { gap: 10px; min-width: 0; }
+.rewa-header-atelier .nav-menu-list .nav-link { font-size: 12px !important; padding: 10px 9px; }
+.rewa-header-atelier .btn-search-trigger { border-radius: 50% !important; width: 38px !important; height: 38px !important; }
+.rewa-header-atelier .navbar-logo + * { min-width: 0; }
+@media (min-width: 1200px) {
+    .rewa-header-atelier .header-content-wrapper > :first-child > .d-flex { display: grid !important; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 24px !important; }
+    .rewa-header-atelier .header-content-wrapper > :first-child > .d-flex > :first-child { grid-column: 2; grid-row: 1; }
+    .rewa-header-atelier .nav-menu-list { grid-column: 1; grid-row: 1; min-width: 0; }
+    .rewa-header-atelier .nav-menu-list > ul { flex-wrap: wrap; gap: 0 !important; }
+    .rewa-header-atelier .header-right-content { grid-column: 3; grid-row: 1; }
+}
+
+/* Exchange: prominent search, a separate dark navigation band and a compact utility strip. */
+.rewa-header-exchange .top-navbar { border-bottom: 1px solid rgb(32 37 31 / 8%); }
+.rewa-header-exchange .top-navbar .dropdown-toggle { font-size: 11px !important; }
+.rewa-header-exchange .logo-bar-area { padding-block: 12px; }
+.rewa-header-exchange #header-logo-preview { max-width: 210px; object-fit: contain; }
+.rewa-header-exchange .front-header-search { background: transparent !important; margin-inline: 32px !important; min-width: 0; }
+.rewa-header-exchange .front-header-search input[name="keyword"] { border-radius: 999px !important; border: 1px solid #e3e4dd !important; background: var(--chrome-search-bg, #f4f2ec) !important; color: var(--chrome-search-ink, #20251f) !important; min-height: 50px; padding-inline-start: 22px; }
+.rewa-header-exchange .bottom-background-color-visibility { height: 56px !important; }
+.rewa-header-exchange .header_menu_links { font-weight: 500 !important; font-size: 12px !important; border-radius: 999px; }
+.rewa-header-exchange .header_menu_links:hover { background: rgb(255 255 255 / 12%); }
+.rewa-header-exchange #category-menu-bar { min-width: 180px; border-inline-end: 1px solid rgb(255 255 255 / 16%); }
+.rewa-header-exchange #cart_items { padding-inline-start: 20px; border-inline-start: 1px solid rgb(255 255 255 / 16%); }
+.rewa-header-exchange .top-navbar .dropdown-menu { z-index: 1050; }
+.rewa-header-exchange .logo-bar-area > :first-child > .d-flex > div:last-child { flex-shrink: 0; }
+
+/* Both new footers preserve the complete native widgets and their configured colours. */
+.rewa-footer-atelier .footer-widget, .rewa-footer-exchange .footer-widget { border-color: rgb(128 128 128 / 20%) !important; }
+.rewa-footer-atelier .footer-widget h4, .rewa-footer-exchange .footer-widget h4 { font-size: 12px !important; letter-spacing: .08em; text-transform: uppercase; opacity: 1 !important; margin-bottom: 24px !important; }
+.rewa-footer-atelier .footer-widget a, .rewa-footer-exchange .footer-widget a { font-size: 13px; line-height: 1.8; opacity: .85; }
+.rewa-footer-atelier .footer-widget a:hover, .rewa-footer-exchange .footer-widget a:hover { opacity: 1; }
+.rewa-footer-atelier .footer-widget p, .rewa-footer-exchange .footer-widget p { line-height: 1.8; overflow-wrap: anywhere; }
+.rewa-footer-atelier .footer-email-input, .rewa-footer-exchange .footer-email-input { border-radius: 999px !important; padding-inline: 18px; min-height: 50px; }
+.rewa-footer-atelier .footer-widget form button, .rewa-footer-exchange .footer-widget form button { border-radius: 999px !important; min-height: 50px; font-size: 12px !important; }
+.rewa-footer-atelier .social a, .rewa-footer-exchange .social a { display: inline-grid; place-items: center; border-radius: 50%; width: 38px; height: 38px; }
+.rewa-footer-atelier .footer-widget > :first-child, .rewa-footer-exchange .footer-widget > :first-child { border-color: rgb(128 128 128 / 20%) !important; }
+.rewa-footer-atelier .footer-widget img, .rewa-footer-exchange .footer-widget img { object-fit: contain; max-width: 100%; }
+.rewa-footer-atelier .aiz-accordion, .rewa-footer-exchange .aiz-accordion { padding-block: 22px; font-size: 13px; }
+.rewa-footer-atelier .aiz-accordion-panel, .rewa-footer-exchange .aiz-accordion-panel { overflow-wrap: anywhere; }
+.rewa-footer-atelier footer, .rewa-footer-exchange footer { border-top: 1px solid rgb(128 128 128 / 20%); }
+
+/* Atelier: broad newsletter introduction above a five-column editorial directory. */
+.rewa-footer-atelier > .footer-widget:first-child { padding-block: 60px !important; }
+.rewa-footer-atelier > .footer-widget:first-child .text-justify { max-width: 52ch; text-align: start !important; font-size: 15px; }
+.rewa-footer-atelier > .footer-widget:first-child h5 { font-family: Georgia, serif; font-size: 24px !important; font-weight: 400 !important; max-width: 32ch; line-height: 1.4; }
+.rewa-footer-atelier > .footer-widget:first-child .row.align-items-end { align-items: center !important; gap: 40px 0; }
+.rewa-footer-atelier > .footer-widget:nth-of-type(2) { padding-block: 48px !important; }
+.rewa-footer-atelier .social { margin-block: 16px 28px !important; }
+
+/* Exchange: brand and subscription panel alongside the full account/contact directory. */
+@media (min-width: 1200px) {
+    .rewa-footer-exchange { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.65fr); background: var(--chrome-footer-bg, #20251f); }
+    .rewa-footer-exchange > .footer-widget:first-child { padding: 52px 40px !important; border-bottom: 0 !important; border-inline-end: 1px solid rgb(128 128 128 / 20%) !important; }
+    .rewa-footer-exchange > .footer-widget:first-child > :first-child { padding: 0 !important; }
+    .rewa-footer-exchange > .footer-widget:first-child .row.align-items-end { display: block; }
+    .rewa-footer-exchange > .footer-widget:first-child .row.align-items-end > div { width: 100%; max-width: 100%; padding-inline: 0; }
+    .rewa-footer-exchange > .footer-widget:first-child .text-justify { max-width: 42ch; text-align: start !important; }
+    .rewa-footer-exchange > .footer-widget:nth-of-type(2) { padding: 64px 40px 40px !important; }
+    .rewa-footer-exchange > .footer-widget:nth-of-type(2) > :first-child { padding: 0 !important; }
+    .rewa-footer-exchange > .footer-widget:nth-of-type(2) > :first-child > .row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px; }
+    .rewa-footer-exchange > .footer-widget:nth-of-type(2) > :first-child > .row > div { width: 100%; max-width: 100%; }
+    .rewa-footer-exchange > footer { grid-column: 1 / -1; }
+}
+@media (max-width: 1199px) {
+    .rewa-header-atelier .header-content-wrapper { padding-block: 16px !important; }
+    .rewa-header-atelier #header-logo-preview { max-width: min(180px, 35vw); }
+    .rewa-header-atelier .header-right-content { gap: 0; }
+}
+@media (max-width: 991px) {
+    .rewa-header-exchange .front-header-search { margin-inline: 0 !important; }
+    .rewa-header-exchange #header-logo-preview { max-width: min(200px, 45vw); }
+    .rewa-header-exchange .logo-bar-area { padding-block: 0; }
+    .rewa-footer-atelier > .footer-widget:first-child, .rewa-footer-exchange > .footer-widget:first-child { padding-block: 36px !important; }
+    .rewa-footer-atelier > .footer-widget:first-child h5 { font-size: 20px !important; }
+}
+@media (max-width: 575px) {
+    .rewa-header-atelier #header-logo-preview { max-width: 120px; }
+    .rewa-header-atelier .header-content-wrapper > :first-child > .d-flex { gap: 8px !important; }
+    .rewa-header-atelier .header-right-content > div { margin-inline: 0 !important; }
+    .rewa-chrome .container { padding-inline: 16px; }
+    .rewa-footer-atelier > .footer-widget:first-child .row.align-items-end { gap: 16px; }
+    .rewa-footer-atelier .footer-widget .text-lg-right, .rewa-footer-exchange .footer-widget .text-lg-right { text-align: start !important; }
+}

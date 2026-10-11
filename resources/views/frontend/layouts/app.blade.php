@@ -249,6 +249,8 @@
     @if(get_setting('homepage_select') === 'market')
         <link rel="stylesheet" href="{{ static_asset('assets/css/rewa-market.css?v=3') }}">
     @endif
+    <link rel="stylesheet" href="{{ static_asset('assets/css/storefront-pages.css?v=1') }}">
+    <link rel="stylesheet" href="{{ static_asset('assets/css/storefront-layouts.css?v=1') }}">
 </head>
 <body @if(get_setting('homepage_select') === 'market') class="rewa-market" @endif>
     <!-- aiz-main-wrapper -->
@@ -1478,29 +1480,7 @@
         
     @endif
 
-    @if (get_setting('header_element') == 5 || get_setting('header_element') == 6 || get_setting('header_element') == 10)
-        <script>
-            // Language switcher
-            function changeLanguage(code) {
-                $.post('{{ route('language.change') }}', {
-                    _token: '{{ csrf_token() }}',
-                    locale: code
-                }, function () {
-                    location.reload();
-                });
-            }
-
-            // Currency switcher
-            function changeCurrency(code) {
-                $.post('{{ route('currency.change') }}', {
-                    _token: '{{ csrf_token() }}',
-                    currency_code: code
-                }, function () {
-                    location.reload();
-                });
-            }
-        </script>
-    @endif
+    @include('frontend.inc.header_switcher_scripts')
 
     <script>
     function fixSlickVisibility() {
@@ -1597,6 +1577,7 @@
     @if(get_setting('homepage_select') === 'market')
         <script src="{{ static_asset('assets/js/rewa-market.js?v=2') }}" defer></script>
     @endif
+    <script src="{{ static_asset('assets/js/storefront-pages.js?v=1') }}" defer></script>
     @yield('script')
 
     @php

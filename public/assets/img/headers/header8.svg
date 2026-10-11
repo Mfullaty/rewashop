@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 340" role="img" aria-labelledby="title"><title id="title">Atelier header layout</title><rect width="800" height="340" rx="20" fill="#f4f2ec"/>
+<rect x="0" y="60" width="800" height="120" fill="#fff"/>
+<path d="M24 60h752M24 180h752" stroke="#e3e4dd"/>
+<text x="400" y="124" text-anchor="middle" font-family="Georgia,serif" font-size="30" fill="#20251f" letter-spacing="5">REWA SHOP</text>
+<text x="26" y="124" font-family="sans-serif" font-size="13" fill="#20251f">Shop　 Journal　 Brands</text>
+<text x="608" y="124" font-family="sans-serif" font-size="13" fill="#20251f">Search　Account　Bag</text>
+<rect x="24" y="234" width="475" height="82" rx="10" fill="#e4e4db"/>
+<rect x="519" y="234" width="257" height="82" rx="10" fill="#deded4"/>
+</svg>

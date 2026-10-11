@@ -668,8 +668,14 @@ class HomeController extends Controller
 
     public function all_brands(Request $request)
     {
-        $brands = Brand::all();
-        return view('frontend.all_brand', compact('brands'));
+        $request->validate(['search' => 'nullable|string|max:120']);
+        $brandSearch = trim($request->input('search') ?? '');
+        $brands = Brand::all()->sortBy(fn ($brand) => mb_strtolower($brand->getTranslation('name')))->values();
+        $totalBrands = $brands->count();
+        if ($brandSearch !== '') {
+            $brands = $brands->filter(fn ($brand) => mb_stripos($brand->getTranslation('name'), $brandSearch) !== false)->values();
+        }
+        return view('frontend.all_brand', compact('brands', 'brandSearch', 'totalBrands'));
     }
 
     public function home_settings(Request $request)

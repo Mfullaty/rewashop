@@ -1,18 +1,19 @@
 @extends('frontend.layouts.app')
 
 @section('content')
-    <section class="mb-5 mt-3">
+    <section class="rewa-content rewa-deal-detail mb-5 mt-3">
         <div class="container">
             <!-- Top Section -->
-            <div class="pt-2 pt-lg-4 mb-2 mb-lg-4">
+            <div class="deal-detail-heading pt-2 pt-lg-4 mb-2 mb-lg-4">
+                <nav class="rewa-breadcrumb" aria-label="{{ translate('Breadcrumb') }}"><a href="{{ route('home') }}">{{ translate('Home') }}</a><span aria-hidden="true">/</span><a href="{{ route('flash-deals') }}">{{ translate('Flash deals') }}</a></nav>
                 <!-- Title -->
-                <h1 class="fw-700 fs-20 fs-md-24 text-dark">{{ $flash_deal->title }}</h1>
+                <h1>{{ $flash_deal->getTranslation('title') }}</h1>
             </div>
             <input type="hidden" id="selected_homepage" value="{{get_setting('homepage_select')}}">
             <div class="row gutters-16">
                 <!-- Flash Deals Baner & Countdown -->
                 <div class="col-xxl-4 col-lg-5">
-                    <div class="z-3 sticky-top-lg py-3 py-lg-0 h-400px h-md-570px h-lg-400px h-xl-475px">
+                    <div class="deal-detail-banner z-3 py-3 py-lg-0 h-400px h-md-570px h-lg-400px h-xl-475px">
                         <div class="h-100 w-100 w-xl-auto" style="background-image: url('{{ uploaded_asset($flash_deal->banner) }}'); background-size: cover; background-position: center center;">
                             <div class="py-5 px-2 px-lg-3 px-xl-5">
                                 <div class="bg-white">
