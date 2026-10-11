@@ -11,9 +11,11 @@ The journal preserves search, multiple category filters, query-aware pagination,
 | Footer 4, Atelier | Light editorial directory with a broad newsletter introduction | Footer 1 |
 | Footer 5, Exchange | Dark split layout with brand/subscription beside the directory | Footer 1 |
 
-The layouts use the existing `header_element` and `footer_element` settings, element records, colour fields and selection endpoints. Native templates retain cart updates, search/autocomplete, language/currency, accounts, seller registration, notifications, megamenus, mobile navigation, newsletter forms, localized widgets, contact details, social links, apps, payments and addon-dependent controls. Colour defaults apply when selecting an option and remain editable through the existing setup screens. Sticky and full-width settings remain available. Header wrappers use `display: contents` so they do not confine the native sticky header to a short parent.
+The layouts use the existing `header_element` and `footer_element` settings, element records, colour fields and selection endpoints. Native templates retain cart updates, search/autocomplete, language/currency, accounts, seller registration, notifications, megamenus, mobile navigation, newsletter forms, localized widgets, contact details, social links, apps, payments and addon-dependent controls. Shared language/currency handlers load for every header independently of its database ID. Colour defaults apply when selecting an option and remain editable through the existing setup screens. Sticky and full-width settings remain available. Header wrappers use `display: contents` so they do not confine the native sticky header to a short parent.
 
-The registration migration adds four types and their editable colours. It preserves existing selections, IDs and edited values and can run repeatedly without duplicating records. Its rollback intentionally keeps merchant layout records and styles. Admin previews resolve by layout name rather than row position, and the radio controls support keyboard selection.
+The registration migration adds four types and their editable colours. It preserves existing selections, IDs and edited values and can run repeatedly without duplicating records. A private business-setting record tracks the types/styles it created and the previous selections. Rollback moves affected selections back to their previous native layout, or a valid existing default if that layout is unavailable, applies the fallback's styles, removes only migration-created types/styles and invalidates the settings cache. Existing native selections and their current colours remain unchanged. If no valid fallback exists, rollback aborts the entire transaction.
+
+Run the updated migration rollback before reverting this release's files, then clear cached views/configuration. Without an ownership record, rollback still repairs affected selections but retains untracked rows rather than guessing their origin. Admin previews resolve by layout name rather than row position, and the radio controls support keyboard selection.
 
 Deploy the tracked public assets along with the PHP/Blade files, then run the targeted migration and clear cached configuration/views:
 
@@ -30,7 +32,8 @@ Validation commands with installed Composer dependencies:
 php tests/render-storefront-pages.php
 php tests/storefront-layout-registration.php
 php tests/compile-market-views.php
+node tests/header-switchers.cjs
 node --check public/assets/js/storefront-pages.js
 ```
 
-The render and registration checks use controlled fixtures without production data. Responsive browser checks use native templates, the deployed display bundle and actual countdown code. Authenticated cart/account actions, form submissions and database migration should also be verified against staging after deployment.
+The render checks use controlled fixtures without production data. The registration/rollback test requires PDO SQLite and uses an isolated database with real Laravel queries and transactions. The switcher test executes native Header 8 onclick handlers against the rendered shared scripts, intercepting POST requests to verify their payloads and reload callbacks. Responsive browser checks use native templates, the deployed display bundle and actual countdown code. Authenticated cart/account actions, form submissions and MySQL migration should also be verified against staging after deployment.

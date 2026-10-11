@@ -26,8 +26,8 @@ function config($key, $default = null) { return Illuminate\Support\Arr::get(['st
 function request() { return new class { public function query() { return ['search' => "women's", 'selected_categories' => ['shopping']]; } }; }
 function url() { return new class { public function current() { return '/'; } }; }
 function get_all_blog_categories() { return collect([(object)['slug' => 'shopping', 'category_name' => 'Shopping guides'], (object)['slug' => 'community', 'category_name' => 'Community']]); }
-function get_all_active_language() { return collect([(object)['name' => 'English', 'code' => 'en']]); }
-function get_all_active_currency() { return collect([(object)['name' => 'Naira', 'code' => 'NGN', 'symbol' => '₦']]); }
+function get_all_active_language() { return collect([(object)['name' => 'English', 'code' => 'en'], (object)['name' => 'Hausa', 'code' => 'ha']]); }
+function get_all_active_currency() { return collect([(object)['name' => 'Naira', 'code' => 'NGN', 'symbol' => '₦'], (object)['name' => 'US Dollar', 'code' => 'USD', 'symbol' => '$']]); }
 function get_system_language() { return get_all_active_language()->first(); }
 function get_system_currency() { return get_all_active_currency()->first(); }
 function get_level_zero_categories() { return collect(); }
@@ -90,7 +90,7 @@ $render = function ($view, $data, $name = null) use ($previews) {
     return $html;
 };
 $settings = [
-    'homepage_select' => 'market', 'header_stikcy' => 'on', 'vendor_system_activation' => 1,
+    'homepage_select' => 'market', 'header_element' => 873, 'header_stikcy' => 'on', 'vendor_system_activation' => 1,
     'show_language_switcher' => 'on', 'show_currency_switcher' => 'on', 'newsletter_activation' => 1,
     'show_social_links' => 1, 'facebook_link' => 'https://example.test/social',
     'header_menu_labels' => '["Shop","Flash deals","Journal","Brands","All categories"]',
@@ -145,6 +145,10 @@ $assert(str_contains($html, 'No flash deals right now'), 'An empty campaign list
 unset($settings['flash_deal_banner_small']);
 
 $chromeData = ['system_language' => get_system_language(), 'user' => null, 'user_avatar' => '', 'cart_count' => 0, 'lang' => 'en', 'hot_categories' => collect(), 'featured_categories' => collect()];
+$switcherScripts = $render('frontend.inc.header_switcher_scripts', [], 'header-switcher-scripts');
+$layout = file_get_contents(dirname(__DIR__) . '/resources/views/frontend/layouts/app.blade.php');
+$assert(str_contains($layout, "@include('frontend.inc.header_switcher_scripts')") && !str_contains($layout, "get_setting('header_element') =="), 'Switcher handlers must load through the shared layout without hard-coded database ID gates.');
+$assert(str_contains($switcherScripts, 'function changeLanguage') && str_contains($switcherScripts, 'function changeCurrency'), 'Headers with inline controls need both switcher handlers, including Header 8 with an arbitrary database ID.');
 foreach ([8, 9] as $number) {
     $html = $render('header.header' . $number, $chromeData, 'header' . $number);
     foreach (['name="keyword"', 'id="cart_items"', 'Become a Seller', 'stikcy-header-visibility'] as $feature) $assert(str_contains($html, $feature), 'Missing native header feature: ' . $feature);

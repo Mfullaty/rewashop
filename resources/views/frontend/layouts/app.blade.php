@@ -1480,29 +1480,7 @@
         
     @endif
 
-    @if (get_setting('header_element') == 5 || get_setting('header_element') == 6 || get_setting('header_element') == 10)
-        <script>
-            // Language switcher
-            function changeLanguage(code) {
-                $.post('{{ route('language.change') }}', {
-                    _token: '{{ csrf_token() }}',
-                    locale: code
-                }, function () {
-                    location.reload();
-                });
-            }
-
-            // Currency switcher
-            function changeCurrency(code) {
-                $.post('{{ route('currency.change') }}', {
-                    _token: '{{ csrf_token() }}',
-                    currency_code: code
-                }, function () {
-                    location.reload();
-                });
-            }
-        </script>
-    @endif
+    @include('frontend.inc.header_switcher_scripts')
 
     <script>
     function fixSlickVisibility() {
