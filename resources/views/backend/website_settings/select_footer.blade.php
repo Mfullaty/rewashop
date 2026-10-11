@@ -12,17 +12,17 @@
                     <div class="mx-1 footer-card">
                         @foreach ($element_types as $key => $element_type)
 
-                            <div class="card text-center px-2 py-3 w-100" data-footer="{{$element_type->name}}">
-                                <input type="radio" hidden id="element_type_{{ $key }}" name="footer_element"
+                            @php
+                                $layoutKey = strtolower(str_replace(' ', '', $element_type->name));
+                                $layoutLabel = config('storefront_layouts.' . $layoutKey . '.label', $element_type->name);
+                                $layoutPreview = config('storefront_layouts.' . $layoutKey . '.preview', 'assets/img/footers/' . $layoutKey . '.webp');
+                            @endphp
+                            <label for="element_type_{{ $key }}" class="card text-center px-2 py-3 w-100" data-footer="{{ $layoutLabel }}">
+                                <input type="radio" class="sr-only" id="element_type_{{ $key }}" name="footer_element"
                                     value="{{ $element_type->id }}" @if(get_setting('footer_element') == $element_type->id) checked @endif>
-
-                                <img src="{{ static_asset('assets/img/footers/footer' . ($key + 1) . '.webp') }}"
-                                    class="card-img-top mx-auto" alt="footer layout">
-
-                                <p class="mt-2 mb-0 font-weight-bold">
-                                    {{ $element_type->name }}
-                                </p>
-                            </div>
+                                <img src="{{ static_asset($layoutPreview) }}" class="card-img-top mx-auto" alt="{{ translate($layoutLabel) }}">
+                                <p class="mt-2 mb-0 font-weight-bold">{{ translate($layoutLabel) }}</p>
+                            </label>
 
                         @endforeach
                     </div>
@@ -46,6 +46,7 @@
             </div>
         </div>
     </div>
+<style>.footer-card .card:focus-within { outline: 3px solid var(--primary); outline-offset: 3px; } .footer-card .card-img-top { max-height: 240px; object-fit: contain; }</style>
 @endsection
 
 @section('script')

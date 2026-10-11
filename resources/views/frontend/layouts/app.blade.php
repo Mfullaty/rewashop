@@ -249,6 +249,8 @@
     @if(get_setting('homepage_select') === 'market')
         <link rel="stylesheet" href="{{ static_asset('assets/css/rewa-market.css?v=3') }}">
     @endif
+    <link rel="stylesheet" href="{{ static_asset('assets/css/storefront-pages.css?v=1') }}">
+    <link rel="stylesheet" href="{{ static_asset('assets/css/storefront-layouts.css?v=1') }}">
 </head>
 <body @if(get_setting('homepage_select') === 'market') class="rewa-market" @endif>
     <!-- aiz-main-wrapper -->
@@ -1597,6 +1599,7 @@
     @if(get_setting('homepage_select') === 'market')
         <script src="{{ static_asset('assets/js/rewa-market.js?v=2') }}" defer></script>
     @endif
+    <script src="{{ static_asset('assets/js/storefront-pages.js?v=1') }}" defer></script>
     @yield('script')
 
     @php

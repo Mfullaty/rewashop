@@ -1,0 +1,211 @@
+/* Shared content pages. Merchant colours and the selected theme remain available. */
+.rewa-content { --page-ink: #20251f; --page-muted: #6d7167; --page-paper: #f4f2ec; --page-line: #e3e4dd; color: var(--page-ink); font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; padding-block: 28px 80px; }
+.rewa-content [hidden] { display: none !important; }
+.rewa-content .container { max-width: 1440px; }
+.rewa-content a { color: inherit; }
+.rewa-content a:focus-visible, .rewa-content button:focus-visible, .rewa-content input:focus-visible { outline: 3px solid var(--primary, #e62e04); outline-offset: 4px; }
+.rewa-content button, .rewa-content input { font: inherit; }
+.rewa-content img { max-width: 100%; }
+.rewa-breadcrumb { display: flex; flex-wrap: wrap; gap: 10px; font-size: 12px; color: var(--page-muted); margin-bottom: 36px; overflow-wrap: anywhere; }
+.rewa-breadcrumb > :last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: min(60ch, 65vw); }
+.rewa-breadcrumb a:hover { color: var(--primary, #e62e04); }
+.rewa-kicker { display: block; font-size: 11px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; }
+.rewa-content .rewa-button { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; border: 1px solid var(--page-ink); border-radius: 999px; padding: 12px 24px; background: var(--page-ink); color: #fff; font-weight: 600; font-size: 13px; gap: 12px; cursor: pointer; transition: background .2s, color .2s; }
+.rewa-content .rewa-button:hover { background: var(--primary, #e62e04); border-color: var(--primary, #e62e04); }
+.rewa-content .rewa-button-small { min-height: 38px; padding: 8px 18px; font-size: 12px; }
+.rewa-text-link { display: inline-flex; align-items: center; gap: 16px; font-size: 13px; font-weight: 600; }
+.rewa-text-link:hover { text-decoration: underline; }
+.rewa-search { display: flex; align-items: center; border: 1px solid var(--page-line); border-radius: 999px; background: #fff; min-width: 0; padding: 5px; }
+.rewa-search input { width: 100%; min-width: 0; border: 0; background: transparent; padding: 9px 16px; color: var(--page-ink); font-size: 13px; outline-offset: 0; border-radius: 999px; }
+.rewa-search button { flex: 0 0 36px; width: 36px; height: 36px; border: 0; border-radius: 50%; background: var(--page-ink); color: #fff; font-size: 21px; cursor: pointer; }
+.rewa-empty { grid-column: 1 / -1; text-align: center; padding: 72px 24px; border: 1px solid var(--page-line); border-radius: 20px; background: var(--page-paper); }
+.rewa-empty h2 { font-size: 26px; margin: 20px 0 12px; }
+.rewa-empty p { color: var(--page-muted); margin-bottom: 24px; }
+.rewa-empty-mark { font-size: 40px; line-height: 1; }
+.rewa-pagination { display: flex; justify-content: center; margin-top: 48px; }
+
+/* Journal: an oversized editorial masthead and one lead story, followed by a calm grid. */
+.journal-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 40px; padding: 12px 0 44px; border-bottom: 1px solid var(--page-line); }
+.rewa-content .journal-heading h1, .rewa-content .brands-heading h1, .rewa-content .deals-heading h1 { font-family: Georgia, "Times New Roman", serif; font-size: clamp(48px, 6.6vw, 92px); line-height: 1.02; letter-spacing: -.055em; font-weight: 400; margin: 20px 0 0; color: var(--page-ink); }
+.journal-heading h1 em, .brands-heading h1 em { font-weight: 400; color: var(--primary, #e62e04); }
+.journal-heading > p { max-width: 29ch; margin: 0 0 6px; font-size: 15px; line-height: 1.8; color: var(--page-muted); }
+.journal-filters { padding-block: 24px; border-bottom: 1px solid var(--page-line); }
+.journal-filter-top { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.journal-filter-top .rewa-search { width: 340px; max-width: 100%; }
+.journal-topics { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+.journal-topic { margin: 0; cursor: pointer; }
+.journal-topic input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.journal-topic span { display: block; border: 1px solid var(--page-line); border-radius: 999px; padding: 8px 16px; font-size: 12px; color: var(--page-muted); transition: background .2s; }
+.journal-topic input:checked + span { border-color: var(--page-ink); background: var(--page-ink); color: #fff; }
+.journal-topic input:focus-visible + span { outline: 3px solid var(--primary, #e62e04); outline-offset: 3px; }
+.journal-results { display: flex; align-items: baseline; justify-content: space-between; gap: 20px; margin: 36px 0 22px; }
+.journal-results h2 { font-size: 22px; font-weight: 600; letter-spacing: -.025em; margin: 0; }
+.journal-results > span { font-size: 12px; color: var(--page-muted); }
+.journal-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 32px 24px; }
+.journal-card { min-width: 0; display: flex; flex-direction: column; }
+.journal-card-image { position: relative; display: block; overflow: hidden; border-radius: 16px; background: var(--page-paper); aspect-ratio: 1.5; }
+.journal-card-image img { width: 100%; height: 100%; object-fit: cover; transition: transform .4s; }
+.journal-card:hover .journal-card-image img { transform: scale(1.025); }
+.journal-card-body { padding: 22px 0 0; display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.journal-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 16px; font-size: 11px; color: var(--page-muted); margin-bottom: 14px; }
+.journal-category { display: inline-block; width: fit-content; padding: 6px 11px; border-radius: 999px; background: var(--page-paper); color: var(--page-ink); font-size: 11px; font-weight: 600; overflow-wrap: anywhere; }
+.journal-card h2 { font-size: 22px; font-weight: 600; line-height: 1.35; letter-spacing: -.03em; overflow-wrap: anywhere; margin: 0 0 12px; }
+.journal-card h2 a:hover { color: var(--primary, #e62e04); }
+.journal-card p { color: var(--page-muted); font-size: 13px; line-height: 1.8; margin: 0 0 22px; }
+.journal-read { display: flex; justify-content: space-between; align-items: center; margin-top: auto; padding: 16px 0 6px; border-top: 1px solid var(--page-line); font-size: 12px; font-weight: 600; }
+.journal-read > span { font-size: 23px; }
+.journal-card-featured { grid-column: 1 / -1; display: grid; grid-template-columns: 1.25fr 1fr; margin-bottom: 8px; border: 1px solid var(--page-line); border-radius: 24px; overflow: hidden; background: var(--page-paper); }
+.journal-card-featured .journal-card-image { border-radius: 0; aspect-ratio: auto; min-height: 360px; }
+.journal-card-featured .journal-card-body { padding: clamp(28px, 4vw, 60px); justify-content: center; }
+.journal-card-featured h2 { font-family: Georgia, "Times New Roman", serif; font-weight: 400; font-size: clamp(28px, 3vw, 44px); line-height: 1.15; letter-spacing: -.04em; }
+.journal-card-featured .journal-category { background: #fff; }
+.journal-card-featured .journal-read { margin-top: 24px; }
+.journal-image-label { position: absolute; inset-inline-start: 20px; top: 20px; background: #fff; color: var(--page-ink); padding: 9px 14px; font-size: 11px; border-radius: 999px; }
+
+/* Article: generous title, full-width cover, a narrow reading measure and generated contents. */
+.article-heading { max-width: 970px; text-align: center; margin: 54px auto 40px; }
+.rewa-content .article-heading h1 { font: 400 clamp(34px, 4.5vw, 64px)/1.12 Georgia, "Times New Roman", serif; letter-spacing: -.04em; margin: 24px 0; overflow-wrap: anywhere; }
+.article-deck { max-width: 65ch; margin: 0 auto 24px; font-size: 17px; color: var(--page-muted); line-height: 1.8; }
+.article-byline { display: flex; justify-content: center; align-items: center; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--page-muted); }
+.article-dot { width: 3px; height: 3px; border-radius: 50%; background: currentColor; }
+.article-cover { width: 100%; margin: 0 0 56px; overflow: hidden; border-radius: 24px; background: var(--page-paper); }
+.article-cover img { display: block; width: 100%; max-height: 640px; object-fit: cover; }
+.article-layout { display: grid; grid-template-columns: 230px minmax(0, 740px); justify-content: center; gap: clamp(32px, 5vw, 80px); }
+.article-sidebar { align-self: start; position: sticky; top: calc(var(--market-sticky-offset, 0px) + 28px); font-size: 13px; }
+.article-contents { border-block: 1px solid var(--page-line); padding-block: 24px; margin-bottom: 24px; max-height: 60vh; overflow-y: auto; }
+.article-contents ol { list-style: none; padding: 0; margin: 20px 0 0; display: grid; gap: 13px; }
+.article-contents a { display: block; color: var(--page-muted); font-size: 12px; line-height: 1.6; }
+.article-contents a:hover { color: var(--primary, #e62e04); }
+.article-contents .article-subheading { padding-inline-start: 16px; }
+.article-reading-column { min-width: 0; }
+.article-body { color: #3d443a; font-size: 17px; line-height: 1.95; overflow-wrap: anywhere; }
+.article-body h2, .article-body h3, .article-body h4 { color: var(--page-ink); line-height: 1.3; letter-spacing: -.025em; margin-block: 38px 20px; scroll-margin-top: calc(var(--market-sticky-offset, 0px) + 28px); }
+.article-body h2 { font-size: 30px; }
+.article-body h3 { font-size: 24px; }
+.article-body p, .article-body ul, .article-body ol { margin-bottom: 24px; }
+.article-body > :first-child { margin-top: 0; }
+.article-body img, .article-body video, .article-body iframe { max-width: 100%; height: auto; border-radius: 12px; }
+.article-body iframe { aspect-ratio: 16 / 9; width: 100%; }
+.article-body table { display: block; max-width: 100%; overflow-x: auto; }
+.article-body pre { max-width: 100%; overflow-x: auto; padding: 24px; background: var(--page-paper); border-radius: 12px; }
+.article-body blockquote { border-inline-start: 3px solid var(--primary, #e62e04); padding-block: 12px; padding-inline-start: 28px; padding-inline-end: 0; margin-block: 32px; font: italic 25px/1.5 Georgia, serif; }
+.article-body a { color: var(--primary, #e62e04); text-decoration: underline; text-underline-offset: 4px; }
+.article-endnote { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px; border-top: 1px solid var(--page-line); margin-top: 44px; padding-top: 28px; }
+.article-comments { margin-top: 40px; }
+.article-comments h2 { font-size: 24px; margin-bottom: 24px; }
+.journal-related { border-top: 1px solid var(--page-line); padding-top: 20px; margin-top: 80px; }
+
+/* Brands: an alphabet index and generous logo tiles. */
+.brands-heading { display: flex; align-items: center; justify-content: space-between; gap: 40px; padding: 12px 0 48px; }
+.brands-heading p { margin: 24px 0 0; max-width: 44ch; color: var(--page-muted); font-size: 15px; line-height: 1.8; }
+.brands-stamp { position: relative; width: 230px; height: 230px; flex-shrink: 0; border-radius: 50%; background: var(--page-paper); border: 1px solid var(--page-line); display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.brands-stamp strong { font: 400 76px/1 Georgia, serif; letter-spacing: -.06em; }
+.brands-stamp > span { font-size: 12px; color: var(--page-muted); margin-top: 10px; }
+.brands-stamp .brands-stamp-arrow { position: absolute; inset-inline-end: 18px; top: 18px; display: grid; place-items: center; width: 52px; height: 52px; border-radius: 50%; background: var(--primary, #e62e04); color: #fff; font-size: 32px; }
+.brands-toolbar { display: flex; align-items: center; gap: 20px; justify-content: space-between; padding: 24px 0; border-block: 1px solid var(--page-line); }
+.brands-toolbar .rewa-search { width: min(400px, 100%); }
+.brands-result-count { font-size: 12px; color: var(--page-muted); flex-shrink: 0; }
+.brands-alphabet { display: flex; flex-wrap: wrap; gap: 4px; padding: 24px 0; }
+.brands-alphabet button { display: grid; place-items: center; min-width: 34px; height: 34px; padding-inline: 8px; border: 0; border-radius: 8px; background: transparent; color: var(--page-muted); font-size: 12px; cursor: pointer; }
+.brands-alphabet button[aria-pressed="true"] { background: var(--page-ink); color: #fff; }
+.brands-alphabet button:disabled { opacity: .3; cursor: default; }
+.brands-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 20px; margin-top: 16px; }
+.brand-tile { border: 1px solid var(--page-line); border-radius: 16px; overflow: hidden; transition: border-color .2s, transform .2s; min-width: 0; }
+.brand-tile:hover { border-color: var(--page-ink); transform: translateY(-3px); }
+.brand-logo { display: grid; place-items: center; aspect-ratio: 1.25; padding: 32px; background: #fff; }
+.brand-logo img { max-width: 100%; max-height: 86px; width: auto; object-fit: contain; }
+.brand-monogram { font: 400 48px Georgia, serif; color: var(--page-muted); }
+.brand-tile-caption { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 12px; font-weight: 600; border-top: 1px solid var(--page-line); background: var(--page-paper); padding: 16px; }
+.brand-tile-caption > :first-child { overflow-wrap: anywhere; min-width: 0; }
+.brand-tile-caption > :last-child { font-size: 20px; }
+
+/* Flash deals: a dark campaign masthead and actual campaign banners with clear timers. */
+.deals-heading { display: flex; align-items: center; justify-content: space-between; gap: 32px; padding: clamp(28px, 4vw, 64px); background: var(--page-ink); border-radius: 24px; color: #fff; overflow: hidden; }
+.rewa-content .deals-heading h1 { color: #fff; font-size: clamp(42px, 6vw, 82px); }
+.deals-heading h1 em { color: var(--secondary-base, #ffba00); }
+.deals-heading p { color: #c4c8be; max-width: 45ch; font-size: 14px; line-height: 1.8; margin: 24px 0 0; }
+.deals-symbol { width: min(24vw, 280px); aspect-ratio: 1; display: grid; place-items: center; border: 1px solid #69705f; border-radius: 50%; color: var(--secondary-base, #ffba00); flex-shrink: 0; transform: rotate(12deg); }
+.deals-symbol svg { width: 52%; }
+.deals-promo { display: block; border-radius: 18px; overflow: hidden; margin-top: 24px; }
+.deals-promo img { display: block; width: 100%; height: auto; }
+.deals-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.deal-card { min-width: 0; border: 1px solid var(--page-line); border-radius: 20px; overflow: hidden; background: #fff; transition: border-color .2s, transform .2s; }
+.deal-card:hover { border-color: var(--page-ink); transform: translateY(-3px); }
+.deal-card-image { position: relative; aspect-ratio: 1.4; background: var(--page-paper); }
+.deal-card-image img { width: 100%; height: 100%; object-fit: cover; }
+.deal-live { position: absolute; top: 16px; inset-inline-start: 16px; display: inline-flex; align-items: center; gap: 7px; border-radius: 999px; background: #fff; padding: 8px 12px; font-size: 10px; font-weight: 600; }
+.deal-live > span { width: 5px; height: 5px; border-radius: 50%; background: #357044; }
+.deal-card-body { padding: 24px; }
+.deal-card h2 { font-size: 22px; font-weight: 600; line-height: 1.35; letter-spacing: -.025em; margin-bottom: 24px; overflow-wrap: anywhere; }
+.deal-timer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; background: var(--page-paper); border-radius: 10px; padding: 14px; font-size: 11px; }
+.rewa-content .aiz-count-down { display: flex; align-items: center; gap: 4px; direction: ltr; }
+.rewa-content .countdown-item { background: #fff; border: 1px solid var(--page-line); border-radius: 5px; min-width: 25px; padding: 4px; text-align: center; font-size: 12px; font-variant-numeric: tabular-nums; }
+.deal-card-action { display: flex; justify-content: space-between; align-items: center; margin-top: 24px; font-size: 12px; font-weight: 600; }
+.deal-card-action > :last-child { font-size: 23px; }
+.rewa-deal-detail .deal-detail-heading h1 { font: 400 clamp(34px, 4vw, 58px)/1.1 Georgia, serif; margin: 24px 0 36px; }
+.rewa-deal-detail .deal-detail-banner { position: sticky; top: calc(var(--market-sticky-offset, 0px) + 24px); border-radius: 20px; overflow: hidden; }
+.rewa-deal-detail .deal-detail-banner > div { border-radius: 20px; }
+.rewa-deal-detail .row.border-top.border-left { border: 0 !important; row-gap: 16px; }
+.rewa-deal-detail .row.border-top.border-left > .col { border: 0 !important; }
+
+@media (max-width: 1199px) {
+    .brands-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .journal-grid { gap: 24px 20px; }
+    .article-layout { grid-template-columns: 190px minmax(0, 1fr); gap: 40px; }
+    .deals-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 991px) {
+    .journal-heading { gap: 24px; }
+    .journal-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .journal-card-featured .journal-card-body { padding: 28px; }
+    .brands-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .brands-stamp { width: 180px; height: 180px; }
+    .brands-stamp strong { font-size: 58px; }
+    .article-layout { grid-template-columns: 1fr; gap: 28px; }
+    .article-sidebar { position: static; }
+    .article-contents { max-height: 240px; }
+    .article-reading-column { max-width: 740px; width: 100%; margin-inline: auto; }
+    .rewa-deal-detail .deal-detail-banner { position: static; }
+}
+@media (max-width: 575px) {
+    .rewa-content { padding-block: 24px 56px; }
+    .rewa-content .container { padding-inline: 16px; }
+    .rewa-breadcrumb { margin-bottom: 28px; }
+    .journal-heading { display: block; padding-bottom: 28px; }
+    .journal-heading > p { max-width: 38ch; margin-top: 24px; }
+    .journal-filter-top { align-items: flex-start; flex-direction: column; }
+    .journal-filter-top .rewa-search { width: 100%; }
+    .journal-grid { grid-template-columns: 1fr; gap: 32px; }
+    .journal-card-featured { display: flex; }
+    .journal-card-featured .journal-card-image { aspect-ratio: 1.4; min-height: 0; }
+    .journal-card-featured .journal-card-body { padding: 24px; }
+    .journal-card-featured h2 { font-size: 30px; }
+    .article-heading { margin: 32px auto; }
+    .article-deck { font-size: 15px; }
+    .article-cover { margin-bottom: 28px; border-radius: 14px; }
+    .article-body { font-size: 16px; line-height: 1.9; }
+    .article-body h2 { font-size: 26px; }
+    .article-body h3 { font-size: 22px; }
+    .journal-related { margin-top: 48px; }
+    .brands-heading { align-items: flex-end; gap: 12px; padding-bottom: 32px; }
+    .brands-heading > div:first-child { min-width: 0; }
+    .rewa-content .brands-heading h1 { font-size: clamp(36px, 11.5vw, 49px); }
+    .brands-heading p { font-size: 13px; }
+    .brands-stamp { width: 86px; height: 86px; align-self: flex-start; margin-top: 32px; }
+    .brands-stamp strong { font-size: 32px; }
+    .brands-stamp > span { font-size: 9px; width: 56px; text-align: center; margin-top: 4px; }
+    .brands-stamp .brands-stamp-arrow { width: 26px; height: 26px; font-size: 19px; top: -7px; inset-inline-end: -2px; }
+    .brands-toolbar { flex-wrap: wrap; gap: 16px; }
+    .brands-toolbar .rewa-search { width: 100%; }
+    .brands-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .brand-logo { padding: 24px; }
+    .brand-tile-caption { padding: 12px; font-size: 11px; }
+    .deals-heading { border-radius: 18px; position: relative; }
+    .deals-heading > div:first-child { position: relative; z-index: 1; }
+    .deals-symbol { position: absolute; width: 160px; inset-inline-end: -55px; bottom: -50px; opacity: .2; }
+    .deals-grid { grid-template-columns: 1fr; gap: 20px; }
+    .journal-results h2 { font-size: 20px; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .rewa-content *, .rewa-content *::before, .rewa-content *::after { transition: none !important; scroll-behavior: auto !important; }
+}

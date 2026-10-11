@@ -11,22 +11,17 @@
 
                         <div class="mx-1 header-card">
                             @foreach ($element_types as $key => $element_type)
-                                
-                                    <div class="card text-center px-2 py-3 w-100" data-header="{{$element_type->name}}">
-                                        <input type="radio" hidden 
-                                               id="element_type_{{ $key }}" 
-                                               name="header_element"
-                                               value="{{$element_type->id}}" 
-                                               @if(get_setting('header_element') == $element_type->id) checked @endif>
-
-                                        <img src="{{ static_asset('assets/img/headers/header' . ($key+1) . '.webp') }}"
-                                             class="card-img-top mx-auto" alt="header layout">
-
-                                        <p class="mt-2 mb-0 font-weight-bold">
-                                            {{ $element_type->name }}
-                                        </p>
-                                    </div>
-                                
+                                @php
+                                    $layoutKey = strtolower(str_replace(' ', '', $element_type->name));
+                                    $layoutLabel = config('storefront_layouts.' . $layoutKey . '.label', $element_type->name);
+                                    $layoutPreview = config('storefront_layouts.' . $layoutKey . '.preview', 'assets/img/headers/' . $layoutKey . '.webp');
+                                @endphp
+                                <label for="element_type_{{ $key }}" class="card text-center px-2 py-3 w-100" data-header="{{ $layoutLabel }}">
+                                    <input type="radio" class="sr-only" id="element_type_{{ $key }}" name="header_element"
+                                        value="{{ $element_type->id }}" @if(get_setting('header_element') == $element_type->id) checked @endif>
+                                    <img src="{{ static_asset($layoutPreview) }}" class="card-img-top mx-auto" alt="{{ translate($layoutLabel) }}">
+                                    <p class="mt-2 mb-0 font-weight-bold">{{ translate($layoutLabel) }}</p>
+                                </label>
                             @endforeach
                         </div>
 
@@ -49,6 +44,7 @@
                 </div>
     </div>
 </div>
+<style>.header-card .card:focus-within { outline: 3px solid var(--primary); outline-offset: 3px; } .header-card .card-img-top { max-height: 240px; object-fit: contain; }</style>
 @endsection
 
 @section('script')

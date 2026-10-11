@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 340" role="img" aria-labelledby="title"><title id="title">Exchange footer layout</title><rect width="800" height="340" rx="20" fill="#20251f"/>
+<text x="30" y="57" font-family="Georgia,serif" font-size="28" fill="#f4f2ec" letter-spacing="4">REWA SHOP</text>
+<text x="30" y="92" font-family="sans-serif" font-size="12" fill="#f4f2ec">Your favourite online shop.</text>
+<rect x="30" y="126" width="250" height="42" rx="21" fill="none" stroke="#9b9f93"/>
+<text x="49" y="151" font-family="sans-serif" font-size="12" fill="#f4f2ec">Email address</text>
+<path d="M324 30v244" stroke="#9b9f93"/>
+<text x="364" y="60" font-family="sans-serif" font-size="12" fill="#f4f2ec">Discover</text>
+<rect x="364" y="78" width="90" height="4" rx="2" fill="#9b9f93"/>
+<rect x="364" y="96" width="78" height="4" rx="2" fill="#9b9f93"/>
+<rect x="364" y="114" width="66" height="4" rx="2" fill="#9b9f93"/>
+<text x="575" y="60" font-family="sans-serif" font-size="12" fill="#f4f2ec">My account</text>
+<rect x="575" y="78" width="90" height="4" rx="2" fill="#9b9f93"/>
+<rect x="575" y="96" width="78" height="4" rx="2" fill="#9b9f93"/>
+<rect x="575" y="114" width="66" height="4" rx="2" fill="#9b9f93"/>
+<text x="364" y="170" font-family="sans-serif" font-size="12" fill="#f4f2ec">Contacts</text>
+<rect x="364" y="188" width="90" height="4" rx="2" fill="#9b9f93"/>
+<rect x="364" y="206" width="78" height="4" rx="2" fill="#9b9f93"/>
+<rect x="364" y="224" width="66" height="4" rx="2" fill="#9b9f93"/>
+<text x="575" y="170" font-family="sans-serif" font-size="12" fill="#f4f2ec">Seller zone</text>
+<rect x="575" y="188" width="90" height="4" rx="2" fill="#9b9f93"/>
+<rect x="575" y="206" width="78" height="4" rx="2" fill="#9b9f93"/>
+<rect x="575" y="224" width="66" height="4" rx="2" fill="#9b9f93"/>
+<path d="M30 292h740" stroke="#9b9f93"/>
+<text x="30" y="319" font-family="sans-serif" font-size="10" fill="#f4f2ec">Copyright · Rewa Shop</text>
+<text x="650" y="319" font-family="sans-serif" font-size="10" fill="#f4f2ec">Payment methods</text>
+</svg>

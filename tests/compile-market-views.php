@@ -20,6 +20,8 @@ foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root . '/
     if (str_contains($path, '/market/') || str_contains($path, '/auth/') || str_contains($path, '/header/') || str_contains($path, '/footer/') || in_array($path, array_map(fn ($name) => $root . '/resources/views/' . $name . '.blade.php', [
         'frontend/layouts/app', 'frontend/inc/nav', 'frontend/product_details',
         'frontend/product_details/breadcrumb', 'frontend/product_details/image_gallery',
+        'frontend/all_brand', 'frontend/flash_deal/all_flash_deal_list', 'frontend/flash_deal_details',
+        'frontend/blog/listing', 'frontend/blog/details', 'backend/website_settings/select_header', 'backend/website_settings/select_footer',
         'frontend/deliveryboy_login', 'backend/website_settings/select_homepage',
     ]))) $views[] = $path;
 }

@@ -1,6 +1,5 @@
 <!-- footer subscription & icons -->
-<section class="py-3 footer-widget border-bottom" style="background-color: {{ get_setting('footer_bg_color') }}"
-    style="border-color: #3d3d46 !important; background-color: #000000 !important;">
+<section class="py-3 footer-widget border-bottom" style="background-color: {{ get_setting('footer_bg_color') }}">
     <div class="@if (get_setting('show_full_width_footer') == 1) layout-container mx-auto px-3 @else container @endif"> <!-- For Dynamic container class will be layout-container (max-width: 2560px) -->
         <div class="row align-items-end">
             <div class="col-xl-6 col-lg-7">
@@ -135,9 +134,8 @@
             <div class="{{ $col_values }}">
                 <div class="text-center text-sm-left mt-4">
                     <h4 class="fs-14 text-uppercase fw-700 mb-3" style="color: {{ get_setting('footer_text_color') }}">
-                        {{ get_setting('widget_one', null, App::getLocale()) }}
+                        {{ get_setting('widget_one', null, App::getLocale()) ?: translate('Quick links') }}
                     </h4>
-                    <h4 class="fs-14 text-uppercase fw-700 mb-3 opacity-50" style="color: {{ get_setting('footer_text_color') }}">{{ translate('Quick links') }}</h4>
                     <ul class="list-unstyled">
                         @if (get_setting('widget_one_labels', null, App::getLocale()) != null)
                             @foreach (json_decode(get_setting('widget_one_labels', null, App::getLocale()), true) as $key => $value)
@@ -217,7 +215,7 @@
                             </a>
                         </li>
                         @php
-                            $order_tracking = json_decode(get_setting('order_tracking'), true);
+                            $order_tracking = json_decode(get_setting('order_tracking') ?: '{}', true);
                         @endphp
                         @if(isset($order_tracking['enable_order_tracking']) && $order_tracking['enable_order_tracking'] == 1)
                             <li class="mb-2">
@@ -318,7 +316,7 @@
         <div class="aiz-accordion-wrap">
             <div class="aiz-accordion-heading container">
                 <button style="color: {{ get_setting('footer_text_color') }}"
-                    class="aiz-accordion fs-14 bg-transparent">{{ translate('Quick Links')}}</button>
+                    class="aiz-accordion fs-14 bg-transparent">{{ get_setting('widget_one', null, App::getLocale()) ?: translate('Quick Links') }}</button>
             </div>
             <div class="aiz-accordion-panel bg-transparent">
                 <div class="container">
