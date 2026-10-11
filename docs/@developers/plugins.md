@@ -76,8 +76,9 @@ if (addon_is_activated('my_custom_payment')) {
 }
 ```
 
-> [!WARNING]
-> Because the CMS verifies addons using purchase codes against a central activation server (`activation.activeitzone.com`), custom plugins distributed externally may fail the activation check unless you implement a bypass or custom activation logic for your specific addon within `AddonController::check_activation`. 
+ZIP addons do not require purchase-code activation. Installation and updates enable the addon, and the Addon Manager switch controls its local `activated` status. `AppServiceProvider` binds the existing core facade to `App\Services\AddonRepository`, which warms the same `addons` cache used by `addon_is_activated` without changing addon status or redirecting admin requests. The separate base-item verification method remains inherited from the core dependency.
+
+After deploying this change, run `php artisan optimize:clear` and restart any long-running application workers. Addons already disabled by the previous purchase-code check must be enabled once in the Addon Manager. Manually disabled addons stay disabled. Run `php tests/addon-cache.php` with installed Composer dependencies to verify repeated initialization, blank/null purchase codes, manual status changes, and cache invalidation.
 
 ## Development Workflow
 

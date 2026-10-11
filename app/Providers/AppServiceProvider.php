@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Facades\Auth;
+use App\Services\AddonRepository;
 use App\Services\SellerHubService;
 use App\Models\SellerAdminRequest;
 use App\Models\SellerAdminPromotionParticipate;
@@ -64,5 +65,9 @@ class AppServiceProvider extends ServiceProvider
     });
   }
 
-  public function register() {}
+  public function register()
+  {
+    // Keep existing facade callers and base-item checks, replacing only addon cache checks.
+    $this->app->singleton('core-component-repository', fn () => new AddonRepository());
+  }
 }
