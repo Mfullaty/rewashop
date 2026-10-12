@@ -7,9 +7,15 @@ use App\Traits\PreventDemoModeChanges;
 
 class ProductStock extends Model
 {
-    use PreventDemoModeChanges;
+    use PreventDemoModeChanges { save as protected saveWithDemoGuard; }
 
     protected $fillable = ['product_id', 'variant', 'sku', 'price', 'qty', 'image'];
+
+    public function save(array $options = [])
+    {
+        return app(\App\Pos\Services\LegacyGuard::class)->saveStock($this, $options,
+            fn (array $saveOptions) => $this->saveWithDemoGuard($saveOptions));
+    }
     //
     public function product(){
     	return $this->belongsTo(Product::class);

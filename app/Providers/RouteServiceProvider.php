@@ -64,6 +64,11 @@ class RouteServiceProvider extends ServiceProvider
 
     $this->mapPosRoutes();
 
+    Route::prefix('api/pos/v1')->name('pos.api.')
+      ->middleware('pos-api')->group(base_path('routes/pos_api_v1.php'));
+
+    Route::middleware('web')->group(base_path('routes/pos_backend.php'));
+
     $this->mapSellerPackageRoutes();
 
     $this->mapDeliveryBoyRoutes();

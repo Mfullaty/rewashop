@@ -11,6 +11,11 @@ class ProductStockService
 {
     public function store(array $data, $product)
     {
+        return \Illuminate\Support\Facades\DB::transaction(fn () => $this->storeVariants($data, $product), 5);
+    }
+
+    private function storeVariants(array $data, $product)
+    {
         //Log::info('Product Stock Request:', $data);
         $collection = collect($data);
 
@@ -20,12 +25,14 @@ class ProductStockService
         $combinations = (new CombinationService())->generate_combination($options);
         
         $variant = '';
+        $retained = [];
         if (count($combinations) > 0) {
             $product->variant_product = 1;
             $product->save();
             foreach ($combinations as $key => $combination) {
                 $str = ProductUtility::get_combination_string($combination, $collection);
-                $product_stock = new ProductStock();
+                $product_stock = ProductStock::where('product_id', $product->id)->where('variant', $str)->lockForUpdate()->first()
+                    ?? new ProductStock();
                 $product_stock->product_id = $product->id;
                 $product_stock->variant = $str;
                 $product_stock->price = request()['price_' . str_replace('.', '_', $str)];
@@ -33,6 +40,7 @@ class ProductStockService
                 $product_stock->qty = request()['qty_' . str_replace('.', '_', $str)];
                 $product_stock->image = request()['img_' . str_replace('.', '_', $str)];
                 $product_stock->save();
+                $retained[] = $product_stock->id;
             }
         } else {
             $product->variant_product = 0;
@@ -44,7 +52,17 @@ class ProductStockService
 
             $data = $collection->merge(compact('variant', 'qty', 'price'))->toArray();
             
-            ProductStock::create($data);
+            $stock = ProductStock::where('product_id', $product->id)->where('variant', '')->lockForUpdate()->first()
+                ?? new ProductStock();
+            $stock->fill($data);
+            $stock->product_id = $product->id;
+            $stock->save();
+            $retained[] = $stock->id;
+        }
+        $removed = ProductStock::where('product_id', $product->id)->whereNotIn('id', $retained)->lockForUpdate()->get();
+        foreach ($removed as $stock) {
+            app(\App\Pos\Services\LegacyGuard::class)->assertStockDeletable((int) $stock->id);
+            $stock->delete();
         }
     }
 

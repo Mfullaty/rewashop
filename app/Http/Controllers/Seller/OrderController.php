@@ -48,6 +48,7 @@ class OrderController extends Controller
     {   
         $authUser = Auth::user();
         $order = Order::findOrFail($request->order_id);
+        $wasCancelled = $order->delivery_status === 'cancelled';
         $order->delivery_viewed = '0';
         $order->delivery_status = $request->status;
         $order->save();
@@ -83,8 +84,8 @@ class OrderController extends Controller
             $orderDetail->delivery_status = $request->status;
             $orderDetail->save();
 
-            if ($request->status == 'cancelled') {
-                product_restock($orderDetail);
+            if ($request->status == 'cancelled' && !$wasCancelled) {
+                product_restock($orderDetail, true);
             }
         }
         

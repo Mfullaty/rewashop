@@ -234,9 +234,6 @@ class ProductController extends Controller
             }
 
             // Product stock if present
-            if ($product->stocks()->exists()) {
-                $product->stocks()->delete();
-            }
             $this->productStockService->store($request->only([
                 'colors_active',
                 'colors',
@@ -340,7 +337,6 @@ class ProductController extends Controller
         $product->categories()->sync($request->category_ids);
 
         //Product Stock
-        $product->stocks()->delete();
         $this->productStockService->store($request->only([
             'colors_active', 'colors', 'choice_no', 'unit_price', 'sku', 'current_stock', 'product_id'
         ]), $product);
@@ -550,6 +546,12 @@ class ProductController extends Controller
 
     public function single_destroy($id)
     {
+        return app(\App\Pos\Services\LegacyGuard::class)->deleteProduct((int) $id,
+            fn () => $this->single_destroyLegacy($id));
+    }
+
+    private function single_destroyLegacy($id)
+    {
         $product = Product::findOrFail($id);
 
         if (Auth::user()->id != $product->user_id) {
@@ -557,6 +559,7 @@ class ProductController extends Controller
             return 0;
         }
 
+        app(\App\Pos\Services\LegacyGuard::class)->assertProductDeletable((int) $product->id);
         $product->product_translations()->delete();
         $product->categories()->detach();
         $product->stocks()->delete();
@@ -583,6 +586,12 @@ class ProductController extends Controller
 
     public function destroy($id)
     {
+        return app(\App\Pos\Services\LegacyGuard::class)->deleteProduct((int) $id,
+            fn () => $this->destroyLegacy($id));
+    }
+
+    private function destroyLegacy($id)
+    {
         $product = Product::findOrFail($id);
 
         if (Auth::user()->id != $product->user_id) {
@@ -590,6 +599,7 @@ class ProductController extends Controller
             return back();
         }
 
+        app(\App\Pos\Services\LegacyGuard::class)->assertProductDeletable((int) $product->id);
         $product->product_translations()->delete();
         $product->categories()->detach();
         $product->stocks()->delete();
@@ -746,7 +756,7 @@ class ProductController extends Controller
             $product = Product::findOrFail($request->product_id);
             foreach ($request->stocks as $stock_id => $qty) {
                 if (is_numeric($stock_id) && $stock_id > 0) {
-                    $product_stock = ProductStock::find($stock_id);
+                    $product_stock = ProductStock::where('product_id', $product->id)->find($stock_id);
                 } else {
                     $product_stock = null;
                 }

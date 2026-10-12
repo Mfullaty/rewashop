@@ -29,8 +29,8 @@ class Kernel extends HttpKernel
         \App\Http\Middleware\TrimStrings::class,
         \Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull::class,
         \App\Http\Middleware\TrustProxies::class,
-        \Illuminate\Session\Middleware\StartSession::class,
-        \Illuminate\View\Middleware\ShareErrorsFromSession::class,
+        \App\Http\Middleware\Pos\StartSessionUnlessPosApi::class,
+        \App\Http\Middleware\Pos\ShareErrorsUnlessPosApi::class,
     ];
 
     /**
@@ -39,6 +39,12 @@ class Kernel extends HttpKernel
      * @var array
      */
     protected $middlewareGroups = [
+        // Headless device routes deliberately exclude website sessions, CSRF,
+        // Sanctum's SPA-cookie guard, and the legacy application's System-Key.
+        'pos-api' => [
+            \Illuminate\Routing\Middleware\SubstituteBindings::class,
+            \Illuminate\Foundation\Http\Middleware\PreventRequestsDuringMaintenance::class,
+        ],
         'web' => [
             //\App\Http\Middleware\EncryptCookies::class,
             \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,

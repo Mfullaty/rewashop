@@ -20,7 +20,7 @@ Route::controller(PosController::class)->group(function () {
 });
 
 //Admin
-Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function () {
+Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin', \App\Http\Middleware\Pos\BlockLegacyPosCheckout::class]], function () {
     //pos
     Route::controller(PosController::class)->group(function () {
         Route::get('/pos', 'index')->name('poin-of-sales.index');
@@ -46,7 +46,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
 });
 
 //Seller
-Route::group(['prefix' => 'seller', 'middleware' => ['seller', 'verified']], function () {
+Route::group(['prefix' => 'seller', 'middleware' => ['seller', 'verified', \App\Http\Middleware\Pos\BlockLegacyPosCheckout::class]], function () {
     Route::controller(SellerPosController::class)->group(function () {
         Route::get('/pos', 'index')->name('poin-of-sales.seller_index');
         Route::get('/pos/products', 'search')->name('pos.search_seller_product');

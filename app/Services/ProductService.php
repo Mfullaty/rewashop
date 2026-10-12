@@ -403,7 +403,14 @@ class ProductService
 
     public function destroy($id)
     {
+        return app(\App\Pos\Services\LegacyGuard::class)->deleteProduct((int) $id,
+            fn () => $this->destroyLegacy($id));
+    }
+
+    private function destroyLegacy($id)
+    {
         $product = Product::findOrFail($id);
+        app(\App\Pos\Services\LegacyGuard::class)->assertProductDeletable((int) $product->id);
         $product->product_translations()->delete();
         $product->categories()->detach();
         $product->stocks()->delete();

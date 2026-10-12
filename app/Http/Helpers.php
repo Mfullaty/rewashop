@@ -1637,8 +1637,16 @@ if (!function_exists('customer_purchase_payment_done')) {
 }
 
 if (!function_exists('product_restock')) {
-    function product_restock($orderDetail)
+    function product_restock($orderDetail, $cancellation = false)
     {
+        if (app(\App\Pos\Services\LegacyGuard::class)->managedOrder((int) $orderDetail->order_id)) {
+            throw new \App\Pos\Exceptions\PosException('POS_ORDER_MANAGED', 'Use the POS return or void service for retail stock restoration.', 409);
+        }
+        if (app(\App\Pos\Services\LegacyGuard::class)->ready()) {
+            app(\App\Pos\Services\LegacyCheckoutService::class)->restock($orderDetail, (bool) $cancellation);
+            return;
+        }
+
         $variant = $orderDetail->variation;
         if ($orderDetail->variation == null) {
             $variant = '';
@@ -1663,6 +1671,11 @@ if (!function_exists('product_restock')) {
 if (!function_exists('calculateCommissionAffilationClubPoint')) {
     function calculateCommissionAffilationClubPoint($order)
     {
+        if (app(\App\Pos\Services\LegacyGuard::class)->managedOrder((int) $order->id)) {
+            // Retail cash and external tenders are collected by the merchant.
+            // They must not create the platform's gateway payout liabilities.
+            return;
+        }
         (new CommissionController)->calculateCommission($order);
 
         if (addon_is_activated('affiliate_system')) {

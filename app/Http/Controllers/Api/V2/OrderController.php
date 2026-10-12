@@ -21,6 +21,12 @@ class OrderController extends Controller
 {
     public function store(Request $request, $set_paid = false)
     {
+        return app(\App\Pos\Services\LegacyCheckoutService::class)->checkout((int) auth()->id(),
+            fn () => $this->storeLegacy($request, $set_paid));
+    }
+
+    private function storeLegacy(Request $request, $set_paid = false)
+    {
         if (get_setting('minimum_order_amount_check') == 1) {
             $subtotal = 0;
             foreach (Cart::where('user_id', auth()->user()->id)->active()->get() as $key => $cartItem) {
@@ -144,8 +150,7 @@ class OrderController extends Controller
                         'message' => translate('The requested quantity is not available for ') . $product->name
                     ]);
                 } elseif ($product->digital != 1) {
-                    $product_stock->qty -= $cartItem['quantity'];
-                    $product_stock->save();
+                    app(\App\Pos\Services\LegacyCheckoutService::class)->deduct($product_stock, (int) $cartItem['quantity'], (int) $order->id, auth()->user());
                 }
 
                 $order_detail = new OrderDetail;
@@ -284,7 +289,7 @@ class OrderController extends Controller
             foreach ($order->orderDetails as $key => $orderDetail) {
                 $orderDetail->delivery_status = 'cancelled';
                 $orderDetail->save();
-                product_restock($orderDetail);
+                product_restock($orderDetail, true);
             }
 
             return $this->success(translate('Order has been canceled successfully'));

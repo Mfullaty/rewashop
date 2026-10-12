@@ -14,6 +14,7 @@ class Handler extends ExceptionHandler
      * @var array
      */
     protected $dontReport = [
+        \App\Pos\Exceptions\PosException::class,
         //
     ];
 
@@ -42,6 +43,28 @@ class Handler extends ExceptionHandler
 
     public function render($request, Throwable $e)
     {
+        if ($e instanceof \Illuminate\Validation\ValidationException && $request->is('api/pos/v1/*', 'pos/backend/*')) {
+            return response()->json(['error' => ['code' => 'INVALID_REQUEST', 'message' => 'The POS request failed validation.',
+                'fields' => $e->errors()]], 422);
+        }
+        if ($request->is('api/pos/v1/*', 'pos/backend/*')) {
+            if ($e instanceof \App\Pos\Exceptions\PosException) { return $e->render($request); }
+            if ($e instanceof \Illuminate\Auth\AuthenticationException) {
+                return response()->json(['error' => ['code' => 'UNAUTHENTICATED', 'message' => 'Sign in to use the browser POS backend.']], 401);
+            }
+            if ($e instanceof \Illuminate\Session\TokenMismatchException) {
+                return response()->json(['error' => ['code' => 'CSRF_TOKEN_MISMATCH', 'message' => 'Refresh the browser session and retry with a valid CSRF token.']], 419);
+            }
+            if ($e instanceof \Illuminate\Database\Eloquent\ModelNotFoundException) {
+                return response()->json(['error' => ['code' => 'NOT_FOUND', 'message' => 'The POS record was not found.']], 404);
+            }
+            if ($e instanceof \Symfony\Component\HttpKernel\Exception\HttpExceptionInterface) {
+                $status = $e->getStatusCode();
+                return response()->json(['error' => ['code' => $status === 429 ? 'RATE_LIMITED' : 'HTTP_ERROR',
+                    'message' => $status === 429 ? 'Back off and retry the POS request.' : 'The POS request could not be completed.']], $status, $e->getHeaders());
+            }
+            return response()->json(['error' => ['code' => 'INTERNAL_ERROR', 'message' => 'The POS request failed. Query sync status before retrying an uncertain event.']], 500);
+        }
         if ($e instanceof Redirectingexception) {
             return redirect()->back();
         }

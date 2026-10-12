@@ -24,6 +24,11 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
+        if (config('pos.enabled')) {
+            $schedule->command('pos:catalog:rebuild --price-windows')->everyMinute()->withoutOverlapping();
+            $schedule->command('pos:catalog:rebuild')->hourly()->withoutOverlapping();
+            $schedule->command('pos:prune-transient')->daily()->withoutOverlapping();
+        }
         // $schedule->command('inspire')
         //          ->hourly();
     }

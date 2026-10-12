@@ -439,9 +439,6 @@ class ProductController extends Controller
             }
 
             // Product stock if present
-            if ($product->stocks()->exists()) {
-                $product->stocks()->delete();
-            }
             $this->productStockService->store($request->only([
                 'colors_active',
                 'colors',
@@ -643,7 +640,6 @@ class ProductController extends Controller
 
 
         //Product Stock
-        $product->stocks()->delete();
         $this->productStockService->store($request->only([
             'colors_active',
             'colors',
@@ -740,8 +736,15 @@ class ProductController extends Controller
 
     public function single_product_delete($id)
     {
+        return app(\App\Pos\Services\LegacyGuard::class)->deleteProduct((int) $id,
+            fn () => $this->single_product_deleteLegacy($id));
+    }
+
+    private function single_product_deleteLegacy($id)
+    {
         $product = Product::findOrFail($id);
 
+        app(\App\Pos\Services\LegacyGuard::class)->assertProductDeletable((int) $product->id);
         $product->product_translations()->delete();
         $product->categories()->detach();
         $product->stocks()->delete();
@@ -1136,7 +1139,7 @@ class ProductController extends Controller
             $product = Product::findOrFail($request->product_id);
             foreach ($request->stocks as $stock_id => $qty) {
                 if (is_numeric($stock_id) && $stock_id > 0) {
-                    $product_stock = ProductStock::find($stock_id);
+                    $product_stock = ProductStock::where('product_id', $product->id)->find($stock_id);
                 } else {
                     $product_stock = null;
                 }
