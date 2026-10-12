@@ -68,7 +68,7 @@ class Client {
       // its exact original operation has not posted. Authentication errors,
       // 5xx responses and generic validation failures remain uncertain.
       const definitive = ['STOCK_NOT_FOUND', 'INSUFFICIENT_STOCK', 'PRICE_MISMATCH', 'DISCOUNT_LIMIT', 'INVALID_DISCOUNT', 'PRICE_OVERRIDE_DENIED', 'CURRENCY_MISMATCH', 'INVALID_EVENT_TIME', 'SHIFT_UNAVAILABLE', 'INVALID_CHANGE', 'PAYMENT_REFERENCE_REQUIRED', 'TENDER_TOTAL_MISMATCH', 'INVALID_TENDER', 'QUANTITY_LIMIT'];
-      if (row.path === 'sales' && definitive.includes(e.code)) this.s.db.prepare('UPDATE requests SET response=? WHERE id=?').run(JSON.stringify({rejected: true, code: e.code, message: e.message}), row.id);
+      if ((row.path === 'sales' && definitive.includes(e.code)) || (row.path === 'inventory/allocations/request' && ['ALLOCATION_LIMIT', 'INSUFFICIENT_STOCK', 'STOCK_NOT_FOUND', 'INVALID_PRICE', 'INVALID_PROMOTION', 'PRICE_WINDOW_CHANGED'].includes(e.code)) || (row.path === 'inventory/allocations/reconcile' && ['RECONCILIATION_INCOMPLETE', 'RECONCILIATION_CONFLICT', 'ALLOCATION_UNAVAILABLE'].includes(e.code))) this.s.db.prepare('UPDATE requests SET response=? WHERE id=?').run(JSON.stringify({rejected: true, code: e.code, message: e.message}), row.id);
       throw e;
     }
     this.s.transaction(() => {
@@ -129,6 +129,7 @@ class Client {
       this.applyAck(result);
       if (!success(result)) throw Error(result.message || result.error_code || 'Sync paused for review.');
     }
+    await this.refreshBootstrap();
     await this.refreshCatalog();
     await this.refreshAllocations();
     this.s.set('restore_pending', false); this.s.set('last_sync', Date.now()); return this.state();
@@ -252,7 +253,7 @@ class Client {
       shift.expected_minor += q.total_minor; this.s.set('shift', shift); this.s.set('last_clock', Date.now()); this.s.set('cart', []);
     }); return receipt;
   }
-  async allocate(lines) { this.require('inventory:write', true); if (!Array.isArray(lines) || !lines.length || lines.length > 200) throw Error('Choose up to 200 stock lines.'); for (const l of lines) { integer(l.stock_id, 1); integer(l.quantity, 1, 10000); } await this.mutation('inventory/allocations/request', {lines}); await this.refreshCatalog(); return this.state(); }
+  async allocate(lines) { this.require('inventory:write', true); if (!Array.isArray(lines) || !lines.length || lines.length > 200 || new Set(lines.map(l => l.stock_id)).size !== lines.length) throw Error('Choose up to 200 stock lines.'); for (const l of lines) { integer(l.stock_id, 1); integer(l.quantity, 1, 10000); } await this.mutation('inventory/allocations/request', {lines}); await this.refreshCatalog(); return this.state(); }
   async reconcile() {
     this.require('inventory:write', true); await this.sync();
     if (this.s.events(true).length || this.s.reviews().length) throw Error('Sync and resolve all operations before releasing stock.');
@@ -310,7 +311,7 @@ class Client {
   async report(from, to) { this.require('report:read'); const data = await this.api('reports/summary?' + new URLSearchParams({...(from ? {from} : {}), ...(to ? {to} : {})})); this.s.set('report', data); return data; }
   state() {
     const boot = this.s.meta('boot');
-    return {paired: !!this.s.meta('credential'), origin: this.s.meta('origin', 'https://rewashop.com'), boot, shift: this.s.meta('shift'), catalog: this.s.list('catalog'), allocations: this.s.list('allocation'), sales: this.s.list('sale').reverse(), returns: this.s.list('return'), events: this.s.events(), pendingRequests: this.unresolved().map(r => ({id: r.id, path: r.path})), blocked: this.s.meta('blocked'), transferLocked: this.s.meta('transfer_locked'), cart: this.s.meta('cart', []), held: this.s.list('held'), lastSync: this.s.meta('last_sync'), remoteSales: this.s.meta('remote_sales'), report: this.s.meta('report'), pairing: this.s.meta('pairing') ? {pairing_id: this.s.meta('pairing').pairing_id, expires_at: this.s.meta('pairing').expires_at, recovery_device_id: boot?.device_id} : null};
+    return {paired: !!this.s.meta('credential'), origin: this.s.meta('origin', 'https://rewashop.com'), boot, shift: this.s.meta('shift'), catalog: this.s.list('catalog'), allocations: this.s.list('allocation'), sales: this.s.list('sale').reverse(), returns: this.s.list('return'), events: this.s.events().map(e => ({...e, review_resolved: !!this.s.get('resolved', e.event_id)})), pendingRequests: this.unresolved().map(r => ({id: r.id, path: r.path})), blocked: this.s.meta('blocked'), transferLocked: this.s.meta('transfer_locked'), cart: this.s.meta('cart', []), held: this.s.list('held'), lastSync: this.s.meta('last_sync'), remoteSales: this.s.meta('remote_sales'), report: this.s.meta('report'), pairing: this.s.meta('pairing') ? {pairing_id: this.s.meta('pairing').pairing_id, expires_at: this.s.meta('pairing').expires_at, recovery_device_id: boot?.device_id} : null};
   }
 }
 module.exports = {Client, success};

@@ -11,7 +11,7 @@ const {Store}=require('../src/store.cjs'),{Client}=require('../src/client.cjs');
   await client.sync();assert.equal(store.list('catalog').length,1);assert.equal(store.list('catalog')[0].stock_id,22);
   await client.allocate([{stock_id:22,quantity:10}]);client.openShift(10000);const id=randomUUID();
   const receipt=await client.checkout({mode:'offline',client_sale_id:id,cart:[{stock_id:22,quantity:3}],tenders:[{method:'cash',currency:'NGN',amount_minor:32250,received_minor:40000,change_minor:7750}]});assert.equal(receipt.total_minor,32250);
-  lose=true;await assert.rejects(()=>client.sync(),/Dropped/);await client.sync();await client.sync();assert.equal(store.events(true).length,0);
+  lose=true;await assert.rejects(()=>client.sync(),/Dropped/);await client.sync();await client.sync();assert.equal(store.events(true).length,0);assert.equal(store.meta('spent_minor'),32250);
   const sale=store.get('sale',id),detail=await client.saleDetail(sale.server.sale_id);assert.equal(detail.sale.total_minor,32250);assert.equal(detail.lines[0].quantity,3);
   assert.equal(store.get('allocation',receipt.lines[0].allocation_id).consumed,3);
   await client.refund({sale_id:sale.server.sale_id,reason:'One damaged bag',lines:[{sale_line_id:detail.lines[0].id,quantity:1,restock:false}]});await client.sync();
