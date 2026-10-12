@@ -42,14 +42,12 @@ class WorkspaceController extends Controller
     public function workspace(Request $r)
     {
         $c = $this->context($r); $c->require('pos:catalog:read');
-        $owner = DB::table('users')->where('id', $c->sellerId)->first();
-        $name = $c->ownerType === 'seller' ? DB::table('shops')->where('user_id', $c->sellerId)->value('name') : $owner->name;
         $stocks = app(AuthorizationService::class)->stocks($c);
         $categories = Schema::hasTable('categories') ? DB::table('categories')
             ->whereIn('id', (clone $stocks)->select('p.category_id'))->select('id', 'name')->orderBy('name')->get() : [];
         $brands = Schema::hasTable('brands') ? DB::table('brands')
             ->whereIn('id', (clone $stocks)->select('p.brand_id'))->select('id', 'name')->orderBy('name')->get() : [];
-        return response()->json(['store_name' => $name, 'cashier_name' => $c->actor->name,
+        return response()->json(['store_name' => app(\App\Pos\Services\StoreProvisioningService::class)->branding($c->sellerId, $c->ownerType)['name'], 'cashier_name' => $c->actor->name,
             'categories' => $categories, 'brands' => $brands, 'delegatable_abilities' => $c->abilities]);
     }
 
@@ -84,7 +82,7 @@ class WorkspaceController extends Controller
         $q = DB::table('products')->where('added_by', $c->ownerType);
         if ($c->ownerType === 'seller') { $q->where('user_id', $c->sellerId); }
         if (!empty($d['q'])) { $q->where('name', 'like', '%'.addcslashes($d['q'], '%_\\').'%'); }
-        return response()->json($q->select('id', 'name', 'pos', 'published', 'approved', 'digital', 'auction_product', 'wholesale_product', 'barcode')
+        return response()->json($q->select('id', 'name', 'pos', 'published', 'approved', 'digital', 'auction_product', 'wholesale_product', 'barcode', 'pos_excluded')
             ->orderBy('id')->paginate(50));
     }
 
@@ -95,7 +93,7 @@ class WorkspaceController extends Controller
             $q = DB::table('products')->where('added_by', $c->ownerType)->where('id', $id);
             if ($c->ownerType === 'seller') { $q->where('user_id', $c->sellerId); }
             if (!(clone $q)->exists()) { throw new PosException('NOT_FOUND', 'This product is outside your store.', 404); }
-            $q->update(['pos' => $d['pos'], 'updated_at' => now('UTC')]);
+            $q->update(['pos' => $d['pos'], 'pos_excluded' => !$d['pos'], 'updated_at' => now('UTC')]);
             app(CatalogService::class)->product($id);
             app(AuditService::class)->record($c, 'web.product.visibility', (string) $id, $d);
             return ['product_id' => $id, 'pos' => (bool) $d['pos']];

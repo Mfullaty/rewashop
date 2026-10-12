@@ -14,11 +14,12 @@ use Illuminate\Support\Str;
 
 class SalesTest extends PosTestCase
 {
-    public function test_wholesale_only_items_do_not_silently_use_retail_prices(): void
+    public function test_wholesale_physical_items_use_explicit_normal_stock_price_in_pos(): void
     {
         DB::table('products')->where('id', 101)->update(['wholesale_product' => true]);
-        $this->error('STOCK_NOT_FOUND', fn () => app(SalePostingService::class)->post($this->context(), (string) Str::uuid(), $this->saleData()));
-        $this->assertDatabaseCount('orders', 0);
+        $sale = app(SalePostingService::class)->post($this->context(), (string) Str::uuid(), $this->saleData());
+        $this->assertSame(20000, $sale['total_minor']);
+        $this->assertDatabaseHas('product_stocks', ['id' => 11, 'qty' => 18]);
     }
 
     public function test_report_recognises_return_date_and_tax_without_rewriting_the_original_receipt(): void

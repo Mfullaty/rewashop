@@ -32,10 +32,18 @@ class AuthorizationService
         } else {
             throw new PosException('REGISTER_REQUIRED', 'A permitted register must be selected.', 403);
         }
-        $settings = DB::table('pos_settings')->where('seller_id', $sellerId)->first();
         $owner = User::find($sellerId);
+        if ($owner && $owner->user_type === 'seller' && !app(StoreProvisioningService::class)->sellersEnabled()) {
+            throw new PosException('SELLER_POS_DISABLED', 'Seller POS is disabled by the administrator.', 403);
+        }
+        if ($owner && app(StoreProvisioningService::class)->ensure($owner)) {
+            DB::table('products')->where('added_by', $owner->user_type)
+                ->when($owner->user_type === 'seller', fn ($q) => $q->where('user_id', $owner->id))
+                ->orderBy('id')->pluck('id')->each(fn ($id) => app(CatalogService::class)->product((int) $id));
+        }
+        $settings = DB::table('pos_settings')->where('seller_id', $sellerId)->first();
         if (!$settings || !$owner || $owner->banned ||
-            ($settings->owner_type === 'seller' && ($owner->user_type !== 'seller' || !$owner->shop || !$owner->shop->verification_status))) {
+            ($settings->owner_type === 'seller' && ($owner->user_type !== 'seller'))) {
             throw new PosException('STORE_UNAVAILABLE', 'The POS store is not available.', 403);
         }
         if (\Illuminate\Support\Facades\Schema::hasTable('currencies') && \Illuminate\Support\Facades\Schema::hasTable('business_settings')) {
@@ -82,8 +90,8 @@ class AuthorizationService
             $query->where('p.added_by', 'seller')->where('p.user_id', $context->sellerId);
         }
         if ($eligible) {
-            $query->where('p.published', 1)->where('p.approved', 1)->where('p.pos', 1)
-                ->where('p.digital', 0)->where('p.auction_product', 0)->where('p.wholesale_product', 0);
+            $query->where('p.published', 1)->where('p.approved', 1)->where('p.pos_excluded', 0)
+                ->where('p.digital', 0)->where('p.auction_product', 0);
         }
         return $query;
     }

@@ -19,7 +19,7 @@ class PosDoctor extends Command
             'pos_settings', 'pos_device_tokens', 'pos_sales', 'pos_stock_allocations', 'pos_sync_inbox'] as $table) {
             if (!Schema::hasTable($table)) { $errors[] = 'Missing table: '.$table; }
         }
-        foreach (['products' => ['added_by', 'user_id', 'pos', 'approved', 'published', 'barcode', 'wholesale_product'],
+        foreach (['products' => ['added_by', 'user_id', 'pos', 'approved', 'published', 'barcode', 'wholesale_product', 'pos_excluded'],
             'orders' => ['user_id', 'seller_id', 'shipping_type', 'order_from'],
             'product_stocks' => ['product_id', 'variant', 'qty', 'sku', 'price']] as $table => $columns) {
             if (Schema::hasTable($table)) {

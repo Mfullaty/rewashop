@@ -17,7 +17,7 @@ class WebAddonTest extends PosTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        DB::table('addons')->insert(['unique_identifier' => 'rewa_pos_pro', 'activated' => 1, 'version' => '1.0']);
+        DB::table('addons')->insert(['unique_identifier' => 'rewa_pos_pro', 'activated' => 1, 'version' => '1.1']);
         DB::table('business_settings')->insert(['type' => 'current_version', 'value' => '7.5.0']);
     }
 
@@ -91,7 +91,7 @@ class WebAddonTest extends PosTestCase
     public function test_package_mapping_cannot_overwrite_core_files_and_missing_schema_blocks_install(): void
     {
         $zipPath = tempnam(sys_get_temp_dir(), 'pos-addon-'); $zip = new ZipArchive(); $zip->open($zipPath, ZipArchive::OVERWRITE);
-        $zip->addFromString('rewa_pos_pro/config.json', json_encode(['unique_identifier' => 'rewa_pos_pro', 'version' => '1.0', 'minimum_item_version' => '7.5.0',
+        $zip->addFromString('rewa_pos_pro/config.json', json_encode(['unique_identifier' => 'rewa_pos_pro', 'version' => '1.1', 'minimum_item_version' => '7.5.0',
             'files' => [['root_directory' => 'addons/rewa_pos_pro/files/config/app.php', 'update_directory' => 'config/app.php', 'sha256' => hash('sha256', 'unsafe')]]]));
         $zip->addFromString('rewa_pos_pro/files/config/app.php', 'unsafe'); $zip->close(); $zip->open($zipPath);
         try { app(WebAddonInstaller::class)->install($zip); $this->fail('Unsafe destination accepted'); }
@@ -104,7 +104,7 @@ class WebAddonTest extends PosTestCase
 
     public function test_real_release_installs_updates_and_rejects_tampering_before_activation(): void
     {
-        $path = base_path('dist/rewa_pos_pro-1.0.zip');
+        $path = base_path('dist/rewa_pos_pro-1.1.zip');
         if (!is_file($path)) { $this->markTestSkipped('Build and package the web addon to run the install lifecycle check.'); }
         $originalBase = base_path();
         $testRoot = sys_get_temp_dir().'/pos-addon-install-'.Str::uuid();
@@ -114,17 +114,17 @@ class WebAddonTest extends PosTestCase
         DB::table('addons')->where('unique_identifier', 'rewa_pos_pro')->delete();
         $zip = new ZipArchive(); $zip->open($path);
         $addon = app(WebAddonInstaller::class)->install($zip); $zip->close();
-        $this->assertSame(1, $addon->activated); $this->assertSame('1.0', $addon->version);
+        $this->assertSame(1, $addon->activated); $this->assertSame('1.1', $addon->version);
         $tmp = tempnam(sys_get_temp_dir(), 'pos-upgrade-'); copy($path, $tmp); $zip->open($tmp);
-        $manifest = json_decode($zip->getFromName('rewa_pos_pro/config.json'), true); $manifest['version'] = '1.1';
+        $manifest = json_decode($zip->getFromName('rewa_pos_pro/config.json'), true); $manifest['version'] = '1.2';
         $zip->addFromString('rewa_pos_pro/config.json', json_encode($manifest)); $zip->close(); $zip->open($tmp);
         $updated = app(WebAddonInstaller::class)->install($zip); $zip->close();
-        $this->assertSame('1.1', $updated->version); $this->assertDatabaseCount('addons', 1);
+        $this->assertSame('1.2', $updated->version); $this->assertDatabaseCount('addons', 1);
         $zip->open($tmp); $zip->addFromString(substr($manifest['files'][0]['root_directory'], 7), 'tampered'); $zip->close(); $zip->open($tmp);
         try { app(WebAddonInstaller::class)->install($zip); $this->fail('Tampered release accepted'); }
         catch (\RuntimeException $e) { $this->assertStringContainsString('checksum', $e->getMessage()); }
         finally { $zip->close(); unlink($tmp); }
-        $this->assertDatabaseHas('addons', ['unique_identifier' => 'rewa_pos_pro', 'version' => '1.1', 'activated' => 1]);
+        $this->assertDatabaseHas('addons', ['unique_identifier' => 'rewa_pos_pro', 'version' => '1.2', 'activated' => 1]);
         } finally {
             app()->setBasePath($originalBase);
             \Illuminate\Support\Facades\File::deleteDirectory($testRoot);
@@ -133,7 +133,7 @@ class WebAddonTest extends PosTestCase
 
     public function test_real_addons_manager_upload_uses_the_bridge_before_legacy_extraction(): void
     {
-        $zipPath = base_path('dist/rewa_pos_pro-1.0.zip');
+        $zipPath = base_path('dist/rewa_pos_pro-1.1.zip');
         if (!is_file($zipPath)) { $this->markTestSkipped('Build the release ZIP first.'); }
         $root = sys_get_temp_dir().'/pos-addon-http-'.Str::uuid();
         foreach (['routes', 'public', 'bootstrap/cache'] as $dir) { mkdir($root.'/'.$dir, 0755, true); }
@@ -143,9 +143,9 @@ class WebAddonTest extends PosTestCase
         $this->withoutMiddleware(\Spatie\Permission\Middlewares\PermissionMiddleware::class);
         try {
             DB::table('addons')->where('unique_identifier', 'rewa_pos_pro')->delete();
-            $this->actingAs(User::find(1))->post(route('addons.store'), ['addon_zip' => UploadedFile::fake()->createWithContent('rewa_pos_pro-1.0.zip', file_get_contents($zipPath))])
+            $this->actingAs(User::find(1))->post(route('addons.store'), ['addon_zip' => UploadedFile::fake()->createWithContent('rewa_pos_pro-1.1.zip', file_get_contents($zipPath))])
                 ->assertRedirect(route('addons.index'));
-            $this->assertDatabaseHas('addons', ['unique_identifier' => 'rewa_pos_pro', 'activated' => 1, 'version' => '1.0']);
+            $this->assertDatabaseHas('addons', ['unique_identifier' => 'rewa_pos_pro', 'activated' => 1, 'version' => '1.1']);
             $this->assertFileExists($root.'/routes/rewa_pos_pro.php');
             $this->assertDirectoryDoesNotExist($root.'/temp');
             $addonId = DB::table('addons')->where('unique_identifier', 'rewa_pos_pro')->value('id');

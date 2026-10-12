@@ -1743,3 +1743,7 @@ td small {
         font-weight: 700;
     }
 }
+
+.pos-store-logo { width: 44px; height: 44px; object-fit: contain; }
+.receipt-logo { display: block; max-width: 38mm; max-height: 22mm; object-fit: contain; margin: 0 auto 4mm; }
+.receipt p, .receipt footer { white-space: pre-line; overflow-wrap: anywhere; }

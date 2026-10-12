@@ -216,6 +216,8 @@ function Application() {
                 );
             }
             sessionStorage.setItem(attemptsKey, String(attempts + 1));
+            await Promise.all(Array.from(document.querySelectorAll<HTMLImageElement>("#rewa-pos-receipt img"))
+                .map((image) => Promise.race([image.decode().catch(() => undefined), new Promise((resolve) => setTimeout(resolve, 5000))])));
             window.print();
         } catch (error) {
             failure(
@@ -267,12 +269,10 @@ function Application() {
                     href={config.backUrl}
                     aria-label="Back to RewaShop"
                 >
-                    <span className="brand-mark">
-                        r<span>.</span>
-                    </span>
+                    {boot.branding?.logo_url ? <img className="pos-store-logo" src={boot.branding.logo_url} alt="Store logo" /> : <span className="brand-mark">POS</span>}
                     <div>
                         <strong>
-                            rewa<span>shop</span>
+                            {boot.branding?.name || workspace.store_name}
                         </strong>
                         <small>POINT OF SALE</small>
                     </div>

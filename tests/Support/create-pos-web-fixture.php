@@ -10,7 +10,7 @@ class PosWebFixture extends \Tests\Feature\Pos\PosTestCase
     public function build(): void
     {
         $this->setUp();
-        \Illuminate\Support\Facades\DB::table('addons')->insert(['unique_identifier' => 'rewa_pos_pro', 'activated' => true, 'name' => 'RewaShop POS Pro', 'version' => '1.0']);
+        \Illuminate\Support\Facades\DB::table('addons')->insert(['unique_identifier' => 'rewa_pos_pro', 'activated' => true, 'name' => 'RewaShop POS Pro', 'version' => '1.1']);
         \Illuminate\Support\Facades\DB::table('business_settings')->insert(['type' => 'current_version', 'value' => '7.5.0']);
         \Illuminate\Support\Facades\DB::table('users')->where('id', 1)->update(['name' => 'RewaShop Central']);
         \Illuminate\Support\Facades\DB::table('shops')->where('user_id', 2)->update(['name' => 'Amina Retail']);

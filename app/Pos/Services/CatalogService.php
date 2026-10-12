@@ -41,8 +41,9 @@ class CatalogService
             $sellerId = $product ? ($product->added_by === 'admin'
                 ? (int) DB::table('users')->where('user_type', 'admin')->orderBy('id')->value('id')
                 : (int) $product->user_id) : null;
+            if ($sellerId && ($owner = \App\Models\User::find($sellerId))) { app(StoreProvisioningService::class)->ensure($owner); }
             $settings = $sellerId ? DB::table('pos_settings')->where('seller_id', $sellerId)->lockForUpdate()->first() : null;
-            $eligible = $settings && $product->pos && $product->published && $product->approved && !$product->digital && !$product->auction_product && !$product->wholesale_product;
+            $eligible = $settings && !$product->pos_excluded && $product->published && $product->approved && !$product->digital && !$product->auction_product;
             $oldEntries = DB::table('pos_catalog_entries')->where('stock_id', $stockId)->get();
             foreach ($oldEntries as $old) {
                 if (!$eligible || (int) $old->seller_id !== $sellerId) {

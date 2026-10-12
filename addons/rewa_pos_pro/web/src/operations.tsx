@@ -1239,8 +1239,7 @@ function Products(props: Props) {
                                     !!product.published &&
                                     !!product.approved &&
                                     !product.digital &&
-                                    !product.auction_product &&
-                                    !product.wholesale_product;
+                                    !product.auction_product;
                                 return (
                                     <tr key={product.id}>
                                         <td>
@@ -1257,7 +1256,7 @@ function Products(props: Props) {
                                                 }
                                             >
                                                 {eligible
-                                                    ? "Physical retail product"
+                                                    ? product.wholesale_product ? "Physical wholesale: normal stock price" : "Physical retail product"
                                                     : "Not published, approved or retail"}
                                             </Badge>
                                         </td>
@@ -1266,7 +1265,7 @@ function Products(props: Props) {
                                                 <input
                                                     type="checkbox"
                                                     aria-label={`Enable ${product.name} for POS`}
-                                                    checked={!!product.pos}
+                                                    checked={!product.pos_excluded}
                                                     disabled={action.busy}
                                                     onChange={(e) =>
                                                         action.run(
@@ -1321,6 +1320,15 @@ function Products(props: Props) {
 function Settings(props: Props) {
     const { api, boot, can } = props;
     const [footer, setFooter] = useState(boot.settings.receipt_footer || "");
+    const [branding, setBranding] = useState({
+        receipt_name: boot.branding?.name || "",
+        receipt_logo_url: boot.branding?.logo_url || "",
+        receipt_address: boot.branding?.address || "",
+        receipt_phone: boot.branding?.phone || "",
+        receipt_email: boot.branding?.email || "",
+        receipt_tax_details: boot.branding?.tax_details || "",
+    });
+    const [sellersEnabled, setSellersEnabled] = useState(boot.sellers_enabled !== false);
     const [inclusive, setInclusive] = useState(!!boot.settings.tax_inclusive);
     const [registerOpen, setRegisterOpen] = useState(false);
     const [code, setCode] = useState("");
@@ -1371,6 +1379,10 @@ function Settings(props: Props) {
                                     api.mutate(
                                         "settings",
                                         {
+                                            ...branding,
+                                            receipt_logo_url: branding.receipt_logo_url || null,
+                                            receipt_email: branding.receipt_email || null,
+                                            ...(boot.can_manage_seller_pos ? { sellers_enabled: sellersEnabled } : {}),
                                             receipt_footer: footer,
                                             tax_inclusive: inclusive,
                                         },
@@ -1382,6 +1394,29 @@ function Settings(props: Props) {
                             );
                         }}
                     >
+                        {([
+                            ["receipt_name", "Receipt store name", 150],
+                            ["receipt_logo_url", "POS logo URL (HTTPS)", 2048],
+                            ["receipt_address", "Store address", 500],
+                            ["receipt_phone", "Store phone", 50],
+                            ["receipt_email", "Store email", 200],
+                            ["receipt_tax_details", "Tax registration details", 250],
+                        ] as const).map(([key, label, limit]) => (
+                            <Field key={key} label={label}>
+                                <input value={branding[key]} maxLength={limit}
+                                    type={key === "receipt_email" ? "email" : key === "receipt_logo_url" ? "url" : "text"}
+                                    required={key === "receipt_name"}
+                                    disabled={!can("settings:manage")}
+                                    onChange={(e) => setBranding({ ...branding, [key]: e.target.value })} />
+                            </Field>
+                        ))}
+                        <p className="hint">Upload your logo to the website media library and paste its HTTPS URL. New receipts preserve these details at the time of sale.</p>
+                        {boot.can_manage_seller_pos && <label className="checkbox">
+                            <input type="checkbox" checked={sellersEnabled}
+                                disabled={!can("settings:manage")}
+                                onChange={(e) => setSellersEnabled(e.target.checked)} />
+                            Enable POS for all sellers
+                        </label>}
                         <Field label="Receipt footer">
                             <textarea
                                 value={footer}

@@ -1,3 +1,11 @@
+# POS Pro 1.1
+
+- Default physical eligibility with explicit owner exclusions; wholesale uses normal stock price, auction/digital remain excluded.
+- Automatic seller provisioning, including unverified shops; administrator seller access switch with runtime enforcement.
+- Independent merchant logos and receipt business details, snapshotted for new receipts.
+- Thermal 58/80 mm layouts with browser image-loading wait.
+- Additive migration `2026_10_12_000003_add_pos_defaults.php`; deploy core before importing 1.1 ZIP.
+
 # RewaShop POS Pro 1.0
 
 Online retail checkout and store operations now run on the approved shared Laravel POS engine. Platform and seller product catalogs remain separate. The independently built React UI supplies scoped drafts, scanner flows, split tender, receipt printing, returns and till reconciliation without replacing ecommerce templates or a second sale writer.

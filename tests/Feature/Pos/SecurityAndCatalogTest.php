@@ -128,7 +128,7 @@ class SecurityAndCatalogTest extends PosTestCase
     public function test_delisted_catalog_variant_publishes_a_tombstone(): void
     {
         $catalog = app(CatalogService::class); $catalog->stock(11);
-        DB::table('products')->where('id', 101)->update(['pos' => false]); $catalog->stock(11);
+        DB::table('products')->where('id', 101)->update(['pos_excluded' => true]); $catalog->stock(11);
         $this->assertDatabaseHas('pos_change_log', ['entity_id' => '11', 'operation' => 'delete']);
         $this->assertDatabaseCount('pos_catalog_entries', 0);
     }

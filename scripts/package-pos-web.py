@@ -14,7 +14,7 @@ for directory in ['app/Http/Controllers/PosPro', 'app/Http/Middleware/PosPro',
 files.sort()
 if not (ROOT / 'public/addons/rewa-pos/assets/pos.js').exists():
     raise SystemExit('Build the frontend before packaging.')
-manifest = {'name': 'RewaShop POS Pro', 'unique_identifier': 'rewa_pos_pro', 'version': '1.0',
+manifest = {'name': 'RewaShop POS Pro', 'unique_identifier': 'rewa_pos_pro', 'version': '1.1',
             'minimum_item_version': '7.5.0', 'core_bridge_version': 1,
             'addon_banner': 'addons/rewa-pos/banner.svg', 'folders': [],
             'directory': [{'name': sorted({str(path.parent.relative_to(ROOT)) for path in files})}],
@@ -22,7 +22,7 @@ manifest = {'name': 'RewaShop POS Pro', 'unique_identifier': 'rewa_pos_pro', 've
                        'update_directory': str(path.relative_to(ROOT)),
                        'sha256': hashlib.sha256(path.read_bytes()).hexdigest()} for path in files]}
 (ADDON / 'config.json').write_text(json.dumps(manifest, indent=2) + '\n')
-destination = ROOT / 'dist/rewa_pos_pro-1.0.zip'
+destination = ROOT / 'dist/rewa_pos_pro-1.1.zip'
 destination.parent.mkdir(exist_ok=True)
 with zipfile.ZipFile(destination, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
     def add(name, content, directory=False):
