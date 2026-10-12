@@ -2,7 +2,7 @@
 
 ## What to give a seller
 
-Give the seller **RewaShop-POS-1.0.0-Portable-x64.exe**. They double-click it to open the POS. PHP, Node.js, a database server, a browser server and administrator installation are not required on their computer.
+Give the seller **RewaShop-POS-1.0.1-Portable-x64.exe**. They double-click it to open the POS. PHP, Node.js, a database server, a browser server and administrator installation are not required on their computer.
 
 The portable executable contains the program. Sales data is saved separately in the current Windows user's application-data folder. Keep using the same Windows account. Copying the executable to a new computer starts a new, unconfigured POS; use the encrypted transfer process below to bring across the shop's data.
 
@@ -15,7 +15,7 @@ These builds are unsigned until RewaShop supplies a Windows code-signing certifi
 This release extends the current shared Laravel POS backend already in this repository. It does not replace your website or require a new Laravel installation.
 
 1. Back up the website files and database.
-2. If you deploy with Git, deploy this PR's changes. If you deploy through a hosting file manager, extract **RewaShop-POS-Desktop-Bridge-1.0.0.zip** locally. Upload its `app`, `public` and `docs` directories into the existing Laravel application root, merging directories and replacing the matching files.
+2. If you deploy with Git, deploy this PR's changes. If you deploy through a hosting file manager, extract **RewaShop-POS-Desktop-Bridge-1.0.1.zip** locally. Upload its `app`, `public` and `docs` directories into the existing Laravel application root, merging directories and replacing the matching files.
 3. The Laravel root is the folder containing `artisan`, `composer.json`, `app`, `routes` and `storage`. Use `public_html` only if those files actually live there. If the domain points at Laravel's `public` folder, upload the ZIP's `app` directory to the parent application root, and its `public` contents into the domain's public directory.
 4. The bridge contains the updated POS controller and compiled web POS asset with the pairing-approval form. It is a **core update**, not an Addons Manager ZIP. Never upload the desktop EXE to Addons Manager.
 5. This desktop bridge adds no database migrations. If the earlier shared POS core is not installed yet, first complete `web-upgrade-1.1.md`, including its migrations. Keep your existing `.env`, uploads and signing key.
@@ -188,3 +188,5 @@ npm run dist:win
 Use a Windows x64 runner for the installer. Linux can build the portable target, but NSIS uninstaller generation may require Wine. The release workflow is **Windows offline POS** under repository Actions. Download **RewaShop-POS-Windows** after the Windows job succeeds. The workflow also runs the real Laravel integration case.
 
 Code-sign Windows builds using your organization's certificate before broad client distribution. Keep certificate material in protected CI secrets; do not commit it. This implementation includes no production credential, signing private key or customer database.
+
+One open offline allocation per product per device is enforced during preparation. Sync and release unused stock before preparing that product again. For older duplicated allocations, reconcile them and request one replacement quantity.

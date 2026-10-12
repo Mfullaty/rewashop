@@ -3,6 +3,21 @@ const {randomUUID} = require('node:crypto');
 const {integer, calculate, bound} = require('./money.cjs');
 const {verifyPolicy, canonical} = require('./policy.cjs');
 const success = ack => ack?.durable && ['accepted', 'duplicate'].includes(ack.status);
+// These codes arise inside the operation callback, after the persisted
+// idempotency result has been checked. Auth, transport, identity and generic
+// validation failures cannot prove that an earlier attempt did not commit.
+function definitiveRejection(path, error) {
+  if (!Number.isInteger(error.status) || error.status < 400 || error.status >= 500 || [401, 429].includes(error.status)) return false;
+  const scoped = ['NOT_FOUND', 'REGISTER_NOT_FOUND'];
+  let codes = [];
+  if (path === 'sales') codes = ['STOCK_NOT_FOUND', 'INSUFFICIENT_STOCK', 'PRICE_MISMATCH', 'DISCOUNT_LIMIT', 'INVALID_DISCOUNT', 'PRICE_OVERRIDE_DENIED', 'CURRENCY_MISMATCH', 'INVALID_EVENT_TIME', 'SHIFT_UNAVAILABLE', 'INVALID_CHANGE', 'PAYMENT_REFERENCE_REQUIRED', 'TENDER_TOTAL_MISMATCH', 'INVALID_TENDER', 'QUANTITY_LIMIT'];
+  else if (path === 'inventory/allocations/request') codes = ['ALLOCATION_ALREADY_OPEN', 'ALLOCATION_LIMIT', 'INSUFFICIENT_STOCK', 'STOCK_NOT_FOUND', 'INVALID_PRICE', 'INVALID_PROMOTION', 'PRICE_WINDOW_CHANGED'];
+  else if (path === 'inventory/allocations/reconcile') codes = ['RECONCILIATION_INCOMPLETE', 'RECONCILIATION_CONFLICT', 'ALLOCATION_UNAVAILABLE'];
+  else if (/^tenders\/[1-9][0-9]*\/verify$/.test(path)) codes = [...scoped, 'TENDER_NOT_PENDING', 'SETTLEMENT_REFERENCE_USED'];
+  else if (/^refunds\/[1-9][0-9]*\/verify$/.test(path)) codes = [...scoped, 'REFUND_NOT_PENDING', 'SETTLEMENT_REFERENCE_USED'];
+  else if (/^sales\/[1-9][0-9]*\/void$/.test(path)) codes = [...scoped, 'SHIFT_UNAVAILABLE', 'VOID_NOT_ALLOWED'];
+  return codes.includes(error.code);
+}
 class Client {
   constructor(store, transport, credentials) { this.s = store; this.transport = transport; this.credentials = credentials; }
   boot() { const b = this.s.meta('boot'); if (!b) throw Error('Connect this computer first.'); return b; }
@@ -33,8 +48,15 @@ class Client {
     const old = this.s.meta('boot');
     // A recovered journal must keep its original device sequence and allocations.
     // Never attach it to a newly created device.
-    this.s.set('credential', await this.credentials.encrypt(data.token)); this.s.set('credential_expiry', data.expires_at);
-    if (old && old.device_id !== data.device_id) { this.s.set('blocked', 'Supervisor must recover the original device ID, not create a new device.'); throw Error(this.s.meta('blocked')); }
+    if (old && old.device_id !== data.device_id) {
+      this.s.transaction(() => {
+        this.s.remove('meta', 'pairing');
+        this.s.set('blocked', 'Supervisor must recover the original device ID, not create a new device. Start a new connection and recover the displayed existing device ID.');
+      });
+      throw Error(this.s.meta('blocked'));
+    }
+    const encrypted = await this.credentials.encrypt(data.token);
+    this.s.transaction(() => { this.s.set('credential', encrypted); this.s.set('credential_expiry', data.expires_at); });
     this.s.remove('meta', 'pairing'); await this.refreshBootstrap(); await this.sync(); return {status: 'paired'};
   }
   async refreshBootstrap() {
@@ -44,7 +66,7 @@ class Client {
     if (old?.offline_policy_key && canonical(old.offline_policy_key) !== canonical(b.offline_policy_key)) throw Error('Server signing key changed. RewaShop must verify the new key before reconnecting.');
     if (Number(b.last_sequence) > this.s.meta('sequence', 0)) throw Error('This backup is older than server history. Restore the latest backup.');
     this.s.transaction(() => {
-      this.s.set('boot', b); this.s.set('last_contact', Date.now()); this.s.set('blocked', null);
+      this.s.set('boot', b); this.s.set('last_contact', Math.max(this.s.meta('last_contact', 0), Date.now())); this.s.set('blocked', null);
       if (!old) this.s.set('sequence', Number(b.last_sequence));
       const shift = this.s.meta('shift');
       if (shift && b.active_shift?.client_shift_id === shift.client_shift_id) { shift.server_id = b.active_shift.id; this.s.set('shift', shift); }
@@ -64,11 +86,7 @@ class Client {
     let result;
     try { result = await this.api(row.path, 'POST', payload, row.id); }
     catch (e) {
-      // Only errors raised inside a sale's idempotent transaction prove that
-      // its exact original operation has not posted. Authentication errors,
-      // 5xx responses and generic validation failures remain uncertain.
-      const definitive = ['STOCK_NOT_FOUND', 'INSUFFICIENT_STOCK', 'PRICE_MISMATCH', 'DISCOUNT_LIMIT', 'INVALID_DISCOUNT', 'PRICE_OVERRIDE_DENIED', 'CURRENCY_MISMATCH', 'INVALID_EVENT_TIME', 'SHIFT_UNAVAILABLE', 'INVALID_CHANGE', 'PAYMENT_REFERENCE_REQUIRED', 'TENDER_TOTAL_MISMATCH', 'INVALID_TENDER', 'QUANTITY_LIMIT'];
-      if ((row.path === 'sales' && definitive.includes(e.code)) || (row.path === 'inventory/allocations/request' && ['ALLOCATION_LIMIT', 'INSUFFICIENT_STOCK', 'STOCK_NOT_FOUND', 'INVALID_PRICE', 'INVALID_PROMOTION', 'PRICE_WINDOW_CHANGED'].includes(e.code)) || (row.path === 'inventory/allocations/reconcile' && ['RECONCILIATION_INCOMPLETE', 'RECONCILIATION_CONFLICT', 'ALLOCATION_UNAVAILABLE'].includes(e.code))) this.s.db.prepare('UPDATE requests SET response=? WHERE id=?').run(JSON.stringify({rejected: true, code: e.code, message: e.message}), row.id);
+      if (definitiveRejection(row.path, e)) this.s.db.prepare('UPDATE requests SET response=? WHERE id=?').run(JSON.stringify({rejected: true, code: e.code, message: e.message}), row.id);
       throw e;
     }
     this.s.transaction(() => {
@@ -113,7 +131,15 @@ class Client {
   async sync() {
     if (this.s.meta('transfer_locked')) throw Error('This computer was locked for transfer. Use the destination computer.');
     await this.refreshBootstrap();
-    for (const row of this.unresolved()) await this.replayRequest(row);
+    for (const row of this.unresolved()) {
+      try { await this.replayRequest(row); }
+      catch (e) {
+        const saved = this.s.db.prepare('SELECT response FROM requests WHERE id=?').get(row.id);
+        if (!saved?.response || !JSON.parse(saved.response).rejected) throw e;
+        // Preserve the definitive rejection as evidence, and continue recovering
+        // unrelated requests and offline events instead of wedging the journal.
+      }
+    }
     let pending = this.s.events(true);
     for (let offset = 0; offset < pending.length; offset += 100) {
       const query = pending.slice(offset, offset + 100).map(e => 'event_ids[]=' + encodeURIComponent(e.event_id)).join('&');
@@ -175,7 +201,7 @@ class Client {
     const b = this.require('sale:write', true);
     if (this.s.meta('restore_pending') || !b.device?.offline_allowed) throw Error('This computer is not approved for offline sales.');
     if (!Number.isFinite(Date.parse(this.s.meta('credential_expiry'))) || Date.now() > Date.parse(this.s.meta('credential_expiry'))) throw Error('Device permission expired. Reconnect with RewaShop.');
-    if (Date.now() < this.s.meta('last_clock', 0) - 300000) throw Error('Computer clock moved backwards. Correct the clock and reconnect.');
+    if (Date.now() < Math.max(this.s.meta('last_clock', 0), this.s.meta('last_contact', 0)) - 300000) throw Error('Computer clock moved backwards. Correct the clock and reconnect.');
     return b;
   }
   allocation(stockId, quantity) {
@@ -253,7 +279,7 @@ class Client {
       shift.expected_minor += q.total_minor; this.s.set('shift', shift); this.s.set('last_clock', Date.now()); this.s.set('cart', []);
     }); return receipt;
   }
-  async allocate(lines) { this.require('inventory:write', true); if (!Array.isArray(lines) || !lines.length || lines.length > 200 || new Set(lines.map(l => l.stock_id)).size !== lines.length) throw Error('Choose up to 200 stock lines.'); for (const l of lines) { integer(l.stock_id, 1); integer(l.quantity, 1, 10000); } await this.mutation('inventory/allocations/request', {lines}); await this.refreshCatalog(); return this.state(); }
+  async allocate(lines) { this.require('inventory:write', true); if (!Array.isArray(lines) || !lines.length || lines.length > 200 || new Set(lines.map(l => l.stock_id)).size !== lines.length) throw Error('Choose up to 200 stock lines.'); for (const l of lines) { integer(l.stock_id, 1); integer(l.quantity, 1, 10000); if (this.s.list('allocation').some(a => a.status === 'open' && a.stock_id === l.stock_id)) throw Error('Stock is already prepared for this product. Sync and release unused stock before preparing a replacement allocation.'); } await this.mutation('inventory/allocations/request', {lines}); await this.refreshCatalog(); return this.state(); }
   async reconcile() {
     this.require('inventory:write', true); await this.sync();
     if (this.s.events(true).length || this.s.reviews().length) throw Error('Sync and resolve all operations before releasing stock.');
@@ -311,7 +337,7 @@ class Client {
   async report(from, to) { this.require('report:read'); const data = await this.api('reports/summary?' + new URLSearchParams({...(from ? {from} : {}), ...(to ? {to} : {})})); this.s.set('report', data); return data; }
   state() {
     const boot = this.s.meta('boot');
-    return {paired: !!this.s.meta('credential'), origin: this.s.meta('origin', 'https://rewashop.com'), boot, shift: this.s.meta('shift'), catalog: this.s.list('catalog'), allocations: this.s.list('allocation'), sales: this.s.list('sale').reverse(), returns: this.s.list('return'), events: this.s.events().map(e => ({...e, review_resolved: !!this.s.get('resolved', e.event_id)})), pendingRequests: this.unresolved().map(r => ({id: r.id, path: r.path})), blocked: this.s.meta('blocked'), transferLocked: this.s.meta('transfer_locked'), cart: this.s.meta('cart', []), held: this.s.list('held'), lastSync: this.s.meta('last_sync'), remoteSales: this.s.meta('remote_sales'), report: this.s.meta('report'), pairing: this.s.meta('pairing') ? {pairing_id: this.s.meta('pairing').pairing_id, expires_at: this.s.meta('pairing').expires_at, recovery_device_id: boot?.device_id} : null};
+    return {paired: !!this.s.meta('credential'), origin: this.s.meta('origin', 'https://rewashop.com'), boot, shift: this.s.meta('shift'), catalog: this.s.list('catalog'), allocations: this.s.list('allocation'), sales: this.s.list('sale').reverse(), returns: this.s.list('return'), events: this.s.events().map(e => ({...e, review_resolved: !!this.s.get('resolved', e.event_id)})), pendingRequests: this.unresolved().map(r => ({id: r.id, path: r.path})), requestFailures: this.s.db.prepare('SELECT id,path,response FROM requests WHERE response IS NOT NULL').all().map(r => ({id:r.id,path:r.path,...JSON.parse(r.response)})).filter(r => r.rejected), blocked: this.s.meta('blocked'), transferLocked: this.s.meta('transfer_locked'), cart: this.s.meta('cart', []), held: this.s.list('held'), lastSync: this.s.meta('last_sync'), remoteSales: this.s.meta('remote_sales'), report: this.s.meta('report'), pairing: this.s.meta('pairing') ? {pairing_id: this.s.meta('pairing').pairing_id, expires_at: this.s.meta('pairing').expires_at, recovery_device_id: boot?.device_id} : null};
   }
 }
 module.exports = {Client, success};

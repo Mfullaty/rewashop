@@ -16,10 +16,15 @@ const {Store}=require('../src/store.cjs'),{Client}=require('../src/client.cjs');
   assert.equal(store.get('allocation',receipt.lines[0].allocation_id).consumed,3);
   await client.refund({sale_id:sale.server.sale_id,reason:'One damaged bag',lines:[{sale_line_id:detail.lines[0].id,quantity:1,restock:false}]});await client.sync();
   const returned=await client.saleDetail(sale.server.sale_id);assert.equal(returned.lines[0].returned_quantity,1);assert.equal(returned.refunds[0].amount_minor,10750);
+  const online = await client.checkout({mode:'online',client_sale_id:randomUUID(),cart:[{stock_id:22,quantity:1}],tenders:[{method:'bank_transfer',currency:'NGN',amount_minor:10750,reference:'BANK-INITIAL'}]});
+  const external = await client.saleDetail(online.server.sale_id);
+  await client.action('tender',external.tenders[0].id,{reference:'BANK-VERIFIED',evidence:'Bank statement confirmed the transfer'});
+  await assert.rejects(()=>client.action('tender',external.tenders[0].id,{reference:'BANK-ANOTHER',evidence:'Another attempted verification'}),/pending external tenders/);
+  assert.equal(client.unresolved().length,0);await client.sync();
   client.cash(-1000,'Supplies for till');client.closeShift(30500,'');await client.sync();await client.reconcile();
   assert.equal(store.list('allocation').filter(a=>a.status==='open').length,0);assert.equal(store.meta('spent_minor'),0);
-  const report=await client.report();assert.equal(report.totals.sales,1);assert.equal(report.totals.net_minor,21500);assert.equal(report.totals.net_tax_minor,1500);
-  assert.equal(store.get('catalog',22).available_quantity,17);
+  const report=await client.report();assert.equal(report.totals.sales,2);assert.equal(report.totals.net_minor,32250);assert.equal(report.totals.net_tax_minor,2250);
+  assert.equal(store.get('catalog',22).available_quantity,16);
   console.log('Real Laravel integration passed: reserved stock, tax, lost response, replay, partial return, till, close, report and reconciliation.');
  }finally{store.close();fs.rmSync(dir,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1});

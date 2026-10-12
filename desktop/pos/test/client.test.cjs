@@ -36,3 +36,32 @@ test('three partial returns preserve every minor unit and cannot replenish reser
 test('encrypted backup excludes tokens and requires device recovery after restore',async t=>{const f=fixture(t);f.client.openShift(0);await f.sale(1);const bytes=seal(f.store.export(),'a strong backup password');assert.throws(()=>unseal(bytes,'wrong'));const data=unseal(bytes,'a strong backup password');assert.equal(data.records.some(r=>r.id==='credential'),false);f.store.import(data);assert.equal(f.store.events(true).length,2);assert.equal(f.store.meta('credential'),null);await assert.rejects(()=>f.sale(1),/connection/);});
 test('unknown online sale retains exact key and payload for recovery',async t=>{const f=fixture(t);f.client.openShift(0);await f.client.sync();const id=randomUUID(),calls=[];let lose=true;f.client.transport=async(url,o)=>{calls.push(o);if(lose){lose=false;throw Error('timeout')}return {sale_id:10,receipt_id:20,order_id:30,total_minor:10750}};await assert.rejects(()=>f.client.checkout({mode:'online',client_sale_id:id,cart:[{stock_id:11,quantity:1}],tenders:[{method:'cash',currency:'NGN',amount_minor:10750,received_minor:10750,change_minor:0}]}),/timeout/);assert.equal(f.client.unresolved().length,1);await f.client.replayRequest(f.client.unresolved()[0]);assert.equal(calls[0].key,calls[1].key);assert.deepEqual(calls[0].body,calls[1].body);assert.equal(f.store.list('sale').length,1);});
 test('stale backup is refused when server sequence is ahead',async t=>{const f=fixture(t);f.client.openShift(0);await f.client.sync();f.store.set('sequence',0);await assert.rejects(()=>f.client.refreshBootstrap(),/older/);});
+
+test('deterministic action rejections are finalized, survive restart and do not block sync',async t=>{
+ const f=fixture(t),cases=[['tenders/1/verify','TENDER_NOT_PENDING'],['tenders/2/verify','SETTLEMENT_REFERENCE_USED'],['refunds/1/verify','REFUND_NOT_PENDING'],['refunds/2/verify','SETTLEMENT_REFERENCE_USED'],['sales/1/void','VOID_NOT_ALLOWED'],['sales/2/void','SHIFT_UNAVAILABLE']];
+ const original=f.client.transport;
+ for(const [route,code] of cases){f.client.transport=async()=>{const e=Error(code);e.code=code;e.status=409;throw e;};await assert.rejects(()=>f.client.mutation(route,{reason:'Confirmed reason'}),new RegExp(code));assert.equal(f.client.unresolved().length,0);}
+ assert.equal(f.client.state().requestFailures.length,cases.length);f.restart();assert.equal(f.client.unresolved().length,0);await f.client.sync();f.client.openShift(0);assert.equal(f.store.events().length,1);
+ // Old installations may already contain poisoned requests with no response.
+ f.client.transport=original;const id=randomUUID();f.store.db.prepare('INSERT INTO requests(id,path,payload) VALUES(?,?,?)').run(id,'tenders/99/verify',JSON.stringify({payload:{reference:'ref',evidence:'Settlement evidence'},context:{}}));
+ f.client.transport=async(url,o)=>{if(url.endsWith('/tenders/99/verify')){const e=Error('Already settled');e.code='TENDER_NOT_PENDING';e.status=409;throw e;}return original(url,o);};await f.client.sync();assert.equal(f.client.unresolved().length,0);assert.equal(f.client.state().requestFailures.length,cases.length+1);
+});
+test('uncertain action failures retain their exact operation for recovery',async t=>{
+ for(const [status,code] of [[401,'DEVICE_UNAUTHENTICATED'],[403,'PERMISSION_CHANGED'],[429,'RATE_LIMIT'],[500,'TENDER_NOT_PENDING'],[409,'IDEMPOTENCY_CONFLICT'],[422,'INVALID_REQUEST']]){
+  const f=fixture(t);f.client.transport=async()=>{const e=Error(code);e.status=status;e.code=code;throw e;};await assert.rejects(()=>f.client.mutation('tenders/1/verify',{reference:'ref',evidence:'Settlement evidence'}));assert.equal(f.client.unresolved().length,1);
+ }
+});
+test('rollback before first offline sale is checked against contact and preserves money',async t=>{
+ const f=fixture(t);f.client.openShift(0);const now=Date.now();f.store.set('last_contact',now);f.store.set('last_clock',0);t.mock.method(Date,'now',()=>now-600000);
+ await assert.rejects(()=>f.sale(1),/clock moved backwards/);assert.equal(f.store.list('sale').length,0);assert.equal(f.store.get('allocation',f.a.allocation_id).consumed,0);assert.equal(f.store.meta('shift').expected_minor,0);
+ await f.client.refreshBootstrap();assert.equal(f.store.meta('last_contact'),now);await assert.rejects(()=>f.sale(1),/clock moved backwards/);
+});
+test('wrong recovery device does not save credential and allows a fresh pairing',async t=>{
+ const f=fixture(t);f.store.remove('meta','credential');f.store.set('restore_pending',true);f.store.set('pairing',{pairing_id:randomUUID(),pairing_secret:'a'.repeat(64)});const wrong=randomUUID();let encrypts=0;
+ f.client.credentials.encrypt=async token=>{encrypts++;return token;};f.client.transport=async()=>({status:'paired',device_id:wrong,token:'wrong-device-token',expires_at:new Date(Date.now()+86400000).toISOString()});
+ await assert.rejects(()=>f.client.pairConfirm(),/original device ID/);assert.equal(encrypts,0);assert.equal(f.store.meta('credential'),null);assert.equal(f.store.meta('pairing'),null);assert.equal(f.client.state().paired,false);assert.equal(f.store.meta('boot').device_id,f.boot.device_id);
+ const pair={pairing_id:randomUUID(),pairing_secret:'b'.repeat(64)};f.client.transport=async()=>pair;await f.client.pairStart('https://rewashop.com','Recovered till');assert.equal(f.store.meta('pairing').pairing_id,pair.pairing_id);
+});
+test('repeat preparation is rejected before an online request is journaled',async t=>{
+ const f=fixture(t);let requests=0;f.client.transport=async()=>{requests++;throw Error('Must not request duplicate stock');};await assert.rejects(()=>f.client.allocate([{stock_id:11,quantity:5}]),/already prepared/);assert.equal(requests,0);assert.equal(f.client.unresolved().length,0);assert.equal(f.store.list('allocation').length,1);
+});

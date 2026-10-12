@@ -23,6 +23,14 @@ class AllocationService
     {
         $this->enabled($context);
         return app(TransactionService::class)->once($context, $key, 'allocation.request', $data, function () use ($context, $data) {
+            // TransactionService holds the merchant/device mutex. Check before
+            // reserving any units so concurrent preparations cannot split one
+            // stock item across allocations that the v1 sale line cannot combine.
+            if (DB::table('pos_stock_allocations')->where('seller_id', $context->sellerId)
+                ->where('device_id', $context->device->id)->where('status', 'open')
+                ->whereIn('stock_id', array_column($data['lines'], 'stock_id'))->exists()) {
+                throw new PosException('ALLOCATION_ALREADY_OPEN', 'Stock is already prepared for this product. Reconcile its open allocation before preparing another.', 409);
+            }
             $stocks = app(InventoryService::class)->lockStocks($context, array_column($data['lines'], 'stock_id'));
             $device = DB::table('pos_devices')->where('id', $context->device->id)->first();
             $remaining = (int) DB::table('pos_stock_allocations')->where('device_id', $device->id)->where('status', 'open')
