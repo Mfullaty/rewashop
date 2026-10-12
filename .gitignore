@@ -41,3 +41,5 @@ public/uploads.zip
 .env
 # public/all
 
+#ignore pos-policy.key
+pos-policy.key
