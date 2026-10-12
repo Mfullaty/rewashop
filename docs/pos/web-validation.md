@@ -17,7 +17,7 @@ npm --prefix addons/rewa_pos_pro/web run test:browser
 
 Fixtures under `tests/Support` never enter the ZIP. They use `/tmp/rewashop-pos-web-test.sqlite` and a dummy signing key. Cases recreate that database serially. Never substitute production credentials or bind this test login server publicly. `POS_PHP` selects PHP; `PLAYWRIGHT_CHROMIUM_EXECUTABLE` optionally selects a local Chromium.
 
-PHP coverage checks role/product separation, scoped drafts/revisions, deactivation retaining stock/financial records, missing-schema rejection, checksum/path rejection and the real packaged 1.0→1.1 install/update lifecycle. Installer tests copy into an isolated temporary application directory.
+PHP coverage checks role/product separation, scoped drafts/revisions, deactivation retaining stock/financial records, missing-schema rejection, checksum/path rejection and the real packaged 1.1→1.2 install/update lifecycle. Installer tests copy into an isolated temporary application directory.
 
 Browser flows cover opening float, repeated scan, walk-in cash/change, canonical order, receipt/PDF, partial cash return/restock, expected till and close; loss/reload/retry of a committed response; seller isolation; ambiguous scan; hold/resume; retained carts across sections; desktop/phone layout. Frontend tests cover parsing, tax/GST rounding, BigInt bounds, discounts and operational retry identities.
 

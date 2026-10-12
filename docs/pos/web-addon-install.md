@@ -1,3 +1,7 @@
+# Current release: POS Pro 1.1
+
+Use [the full Hostinger 1.1 installation and upgrade guide](web-upgrade-1.1.md) for the current release. The original 1.0 procedure below is retained for historical reference.
+
 # Install RewaShop POS Pro 1.0
 
 POS Pro is the online browser addon for the shared Laravel POS backend. Identifier: `rewa_pos_pro`. Platform stores sell admin products; verified sellers sell their own products. The browser uses the existing transaction service through session authentication and CSRF protection.

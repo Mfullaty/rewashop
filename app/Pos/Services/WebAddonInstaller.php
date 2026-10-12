@@ -21,6 +21,7 @@ class WebAddonInstaller
         foreach (['pos_settings', 'pos_sales', 'pos_receipts', 'pos_web_drafts'] as $table) {
             if (!Schema::hasTable($table)) { throw new RuntimeException('Deploy the POS Pro core bridge and run its migrations before importing the addon. Missing: '.$table); }
         }
+        if (!Schema::hasColumn('products', 'pos_excluded')) { throw new RuntimeException('Run the POS defaults migration before importing POS Pro 1.1.'); }
         if (!is_writable(base_path('routes')) || !is_writable(public_path())) { throw new RuntimeException('The application routes and public directories must be writable during installation.'); }
     }
 

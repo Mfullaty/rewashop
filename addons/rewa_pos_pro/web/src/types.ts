@@ -23,6 +23,16 @@ export interface Register {
     active_shift_id: number | null;
     active: boolean;
 }
+export interface StoreBranding {
+    seller_id?: number;
+    name: string;
+    logo_url?: string;
+    address?: string;
+    phone?: string;
+    email?: string;
+    tax_details?: string;
+    footer?: string;
+}
 export interface Bootstrap {
     seller_id: number;
     owner_type: "admin" | "seller";
@@ -31,7 +41,12 @@ export interface Bootstrap {
     abilities: string[];
     max_discount_bps: number;
     registers: Register[];
-    settings: { receipt_footer?: string; tax_inclusive?: boolean };
+    branding?: StoreBranding;
+    sellers_enabled?: boolean;
+    can_manage_seller_pos?: boolean;
+    settings: { receipt_footer?: string; tax_inclusive?: boolean; receipt_name?: string;
+        receipt_logo_url?: string; receipt_address?: string; receipt_phone?: string;
+        receipt_email?: string; receipt_tax_details?: string };
 }
 export interface Workspace {
     store_name: string;
@@ -132,7 +147,7 @@ export interface Receipt {
     sale_id: number;
     order_id: number;
     order_code: string;
-    store: { name: string; seller_id: number };
+    store: StoreBranding;
     cashier: string;
     register: string;
     occurred_at: string;
@@ -171,6 +186,7 @@ export interface Product {
     id: number;
     name: string;
     pos: boolean;
+    pos_excluded: boolean;
     published: boolean;
     approved: boolean;
     digital: boolean;

@@ -301,3 +301,38 @@ test("browser print failure never submits or cancels another sale", async ({
     );
     expect((await stock.json()).data[0].available_quantity).toBe(19);
 });
+
+test("seller branding appears on POS and thermal receipts without exposing the global switch", async ({ page }) => {
+    await login(page, 2);
+    await page.getByRole("button", { name: "Settings", exact: true }).click();
+    await expect(page.getByLabel("Enable POS for all sellers")).toHaveCount(0);
+    await page.getByLabel("Receipt store name", { exact: true }).fill("Amina Counter");
+    await page.getByLabel("POS logo URL (HTTPS)").fill("https://example.com/logo.png");
+    await page.route("https://example.com/logo.png", (route) => route.fulfill({
+        contentType: "image/svg+xml",
+        body: '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="40"><text x="2" y="24">AMINA</text></svg>',
+    }));
+    await page.getByLabel("Store address", { exact: true }).fill("Kano store");
+    await page.getByLabel("Store phone", { exact: true }).fill("+2348000000000");
+    await page.getByLabel("Tax registration details").fill("TIN 123");
+    await page.getByLabel("Receipt footer", { exact: true }).fill("Shop with Amina again");
+    await page.getByRole("button", { name: "Save merchant settings" }).click();
+    await expect(page.locator(".store-label")).toContainText("Amina Counter");
+    await expect(page.locator(".pos-store-logo")).toHaveAttribute("src", "https://example.com/logo.png");
+    await page.getByLabel("Receipt paper", { exact: true }).selectOption("58");
+    await openShift(page);
+    await scan(page, "00202");
+    await page.getByRole("button", { name: "Take payment" }).click();
+    await page.getByLabel("Tender 1 cash received").fill("100.00");
+    await page.getByRole("button", { name: "Record sale", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Sale recorded", exact: true })).toBeVisible();
+    await page.emulateMedia({ media: "print" });
+    const receipt = page.locator("#rewa-pos-receipt");
+    await expect(receipt).toHaveClass(/receipt-58/);
+    await expect(receipt).toContainText("Amina Counter");
+    await expect(receipt).toContainText("Kano store");
+    await expect(receipt).toContainText("TIN 123");
+    await expect(receipt).toContainText("Shop with Amina again");
+    await expect(receipt.locator("img")).toHaveAttribute("src", "https://example.com/logo.png");
+    await page.emulateMedia({ media: "screen" });
+});

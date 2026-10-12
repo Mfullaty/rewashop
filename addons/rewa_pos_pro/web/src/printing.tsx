@@ -17,8 +17,12 @@ export function PrintReceipt({
         <article id="rewa-pos-receipt" className={`receipt receipt-${width}`}>
             <style>{`@media print { @page { size: ${width === "a4" ? "A4" : "auto"}; margin: ${width === "a4" ? "12mm" : "2mm"}; } }`}</style>
             <header>
-                <div className="receipt-brand">REWASHOP</div>
+                {receipt.store.logo_url && <img className="receipt-logo" src={receipt.store.logo_url} alt="Store logo" /> }
                 <h2>{receipt.store.name}</h2>
+                {receipt.store.address && <p>{receipt.store.address}</p>}
+                {receipt.store.phone && <p>{receipt.store.phone}</p>}
+                {receipt.store.email && <p>{receipt.store.email}</p>}
+                {receipt.store.tax_details && <p>{receipt.store.tax_details}</p>}
                 <p>Retail receipt {duplicate && "• DUPLICATE"}</p>
             </header>
             <p>
@@ -101,7 +105,7 @@ export function PrintReceipt({
                 </div>
             ))}
             <p className="receipt-status">Payment {receipt.payment_status}</p>
-            <footer>{footer || "Thank you for shopping with us."}</footer>
+            <footer>{receipt.store.footer ?? (footer || "Thank you for shopping with us.")}</footer>
         </article>,
         document.body,
     );

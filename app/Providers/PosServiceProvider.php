@@ -22,6 +22,10 @@ class PosServiceProvider extends ServiceProvider
         RateLimiter::for('pos', fn (Request $r) => Limit::perMinute(240)->by(
             $r->attributes->get('pos_context')?->device?->id ?? $r->user()?->id ?? $r->ip()));
 
+        \App\Models\User::saved(function ($user) {
+            if ($user->user_type === 'seller') { app(\App\Pos\Services\StoreProvisioningService::class)->ensure($user); }
+        });
+
         Product::saved(fn ($p) => app(CatalogService::class)->ready() ? app(CatalogService::class)->product($p->id) : null);
         ProductStock::saved(fn ($s) => app(CatalogService::class)->ready() ? app(CatalogService::class)->stock($s->id) : null);
         ProductStock::deleted(fn ($s) => app(CatalogService::class)->ready() ? app(CatalogService::class)->stock($s->id) : null);

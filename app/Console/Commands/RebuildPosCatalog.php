@@ -15,6 +15,12 @@ class RebuildPosCatalog extends Command
     {
         $catalog = app(CatalogService::class);
         if (!$catalog->ready()) { $this->error('Enable POS and provision stores first.'); return self::FAILURE; }
+        if (!$this->option('price-windows')) {
+            \App\Models\User::where('user_type', 'seller')->where('banned', false)->orderBy('id')
+                ->chunkById(100, function ($owners) {
+                    foreach ($owners as $owner) { app(\App\Pos\Services\StoreProvisioningService::class)->ensure($owner); }
+                });
+        }
         $stocks = DB::table('product_stocks');
         if ($this->option('price-windows')) {
             $from = now('UTC')->subMinutes(5)->timestamp; $to = now('UTC')->addMinutes(1)->timestamp;

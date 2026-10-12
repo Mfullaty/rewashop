@@ -53,6 +53,9 @@ class PosController extends Controller
         return response()->json(['schema_version' => 1, 'seller_id' => $c->sellerId, 'owner_type' => $c->ownerType,
             'currency' => $c->currency, 'minor_exponent' => 2, 'cashier_id' => $c->actor->id,
             'registers' => $registers->get(), 'settings' => json_decode($settings->settings, true),
+            'branding' => app(\App\Pos\Services\StoreProvisioningService::class)->branding($c->sellerId, $c->ownerType),
+            'sellers_enabled' => app(\App\Pos\Services\StoreProvisioningService::class)->sellersEnabled(),
+            'can_manage_seller_pos' => $c->actor->user_type === 'admin',
             'catalog_cursor' => (int) $settings->change_sequence,
             'device_id' => $c->device?->id, 'last_sequence' => $c->device?->last_sequence,
             'max_discount_bps' => $c->maxDiscountBps, 'abilities' => $c->abilities,
@@ -253,9 +256,16 @@ class PosController extends Controller
     public function settingsUpdate(PosRequest $r)
     {
         $c = $this->context($r); $c->require('pos:settings:manage'); $data = $r->validated();
+        if (array_key_exists('sellers_enabled', $data) && $c->actor->user_type !== 'admin') {
+            throw new PosException('PERMISSION_DENIED', 'Only an administrator can enable seller POS.', 403);
+        }
         return response()->json(app(TransactionService::class)->once($c, $this->key($r), 'settings.update', $data, function () use ($c, $data) {
             $old = json_decode(DB::table('pos_settings')->where('seller_id', $c->sellerId)->value('settings'), true);
-            $settings = array_replace($old, $data);
+            if (array_key_exists('sellers_enabled', $data)) {
+                DB::table('business_settings')->updateOrInsert(['type' => 'pos_sellers_enabled'], ['value' => $data['sellers_enabled'] ? '1' : '0']);
+            }
+            $merchantData = $data; unset($merchantData['sellers_enabled']);
+            $settings = array_replace($old, $merchantData);
             DB::table('pos_settings')->where('seller_id', $c->sellerId)->update(['settings' => Payload::json($settings), 'updated_at' => now('UTC')]);
             app(AuditService::class)->record($c, 'settings.update', (string) $c->sellerId, $data);
             return ['settings' => $settings, 'catalog_rebuild_required' => array_key_exists('tax_inclusive', $data)];
