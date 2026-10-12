@@ -19,6 +19,9 @@ class PrunePosTransientData extends Command
             });
         });
         DB::table('pos_pairings')->where('expires_at', '<', now('UTC')->subDay())->delete();
+        if (\Illuminate\Support\Facades\Schema::hasTable('pos_web_drafts')) {
+            DB::table('pos_web_drafts')->where('expires_at', '<', now('UTC'))->delete();
+        }
         $this->info('Expired transient POS records pruned.'); return self::SUCCESS;
     }
 }

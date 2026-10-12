@@ -1,0 +1,74 @@
+{
+  "name": "RewaShop POS Pro",
+  "unique_identifier": "rewa_pos_pro",
+  "version": "1.0",
+  "minimum_item_version": "7.5.0",
+  "core_bridge_version": 1,
+  "addon_banner": "addons/rewa-pos/banner.svg",
+  "folders": [],
+  "directory": [
+    {
+      "name": [
+        "app/Http/Controllers/PosPro",
+        "app/Http/Middleware/PosPro",
+        "public/addons/rewa-pos",
+        "public/addons/rewa-pos/assets",
+        "public/addons/rewa-pos/assets/.vite",
+        "resources/views/addons/rewa-pos",
+        "routes"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "root_directory": "addons/rewa_pos_pro/files/app/Http/Controllers/PosPro/WorkspaceController.php",
+      "update_directory": "app/Http/Controllers/PosPro/WorkspaceController.php",
+      "sha256": "801810a422ed81ec00fe67344c42990d5a5d0ebb5cfbb361b61de9b7c7dde0d0"
+    },
+    {
+      "root_directory": "addons/rewa_pos_pro/files/app/Http/Middleware/PosPro/AddonActive.php",
+      "update_directory": "app/Http/Middleware/PosPro/AddonActive.php",
+      "sha256": "0b7785872ee423bf7f5a9fe3f18fee07e636e7304ef4a51cc6146a7fa1865dfd"
+    },
+    {
+      "root_directory": "addons/rewa_pos_pro/files/public/addons/rewa-pos/assets/.vite/license.md",
+      "update_directory": "public/addons/rewa-pos/assets/.vite/license.md",
+      "sha256": "68229380bd3fed1ee4ac5dc6b0edd9b44f9bab6b7a3e85ff1e9b0b6598ee7286"
+    },
+    {
+      "root_directory": "addons/rewa_pos_pro/files/public/addons/rewa-pos/assets/pos.css",
+      "update_directory": "public/addons/rewa-pos/assets/pos.css",
+      "sha256": "11546d9cad1774126766590d97ce89bafdf53c0580bbe51f74d2ae1e9a698a82"
+    },
+    {
+      "root_directory": "addons/rewa_pos_pro/files/public/addons/rewa-pos/assets/pos.js",
+      "update_directory": "public/addons/rewa-pos/assets/pos.js",
+      "sha256": "92ac24200b0a02619c0c7afbe18767f6a5b0c0e1163c70cee403245a8ef333de"
+    },
+    {
+      "root_directory": "addons/rewa_pos_pro/files/public/addons/rewa-pos/banner.svg",
+      "update_directory": "public/addons/rewa-pos/banner.svg",
+      "sha256": "8acb6b197fce24db954c1c1bb0410fa5c82ba3361d7805cc7edb8a306eb1a5ec"
+    },
+    {
+      "root_directory": "addons/rewa_pos_pro/files/resources/views/addons/rewa-pos/menu.blade.php",
+      "update_directory": "resources/views/addons/rewa-pos/menu.blade.php",
+      "sha256": "527d318ad9e0f1f0679630abbf8556c0f073f976267e8a26165dcf1ce48036c2"
+    },
+    {
+      "root_directory": "addons/rewa_pos_pro/files/resources/views/addons/rewa-pos/setup.blade.php",
+      "update_directory": "resources/views/addons/rewa-pos/setup.blade.php",
+      "sha256": "d7757be7469a68d00409a6c51720aba6cb21fe3f6eb2e48ed2a721bc5932ac03"
+    },
+    {
+      "root_directory": "addons/rewa_pos_pro/files/resources/views/addons/rewa-pos/workspace.blade.php",
+      "update_directory": "resources/views/addons/rewa-pos/workspace.blade.php",
+      "sha256": "425faf49973e3d2b46d88dd5811d759a5942da04e7146fbb3f94684512445433"
+    },
+    {
+      "root_directory": "addons/rewa_pos_pro/files/routes/rewa_pos_pro.php",
+      "update_directory": "routes/rewa_pos_pro.php",
+      "sha256": "db8f1da8013ec1769d17a30050da1ce156b11a63eda44ab21eb4d8de6bba1b5d"
+    }
+  ]
+}

@@ -115,6 +115,8 @@ final class Schemas
                 'events.*.type' => 'required|string|max:32', 'events.*.payload' => 'required|array'],
             'status' => ['event_ids' => 'required|array|min:1|max:100', 'event_ids.*' => 'required|uuid|distinct'],
             'search' => ['q' => 'nullable|string|max:150', 'barcode' => 'nullable|string|max:255', 'sku' => 'nullable|string|max:255',
+                'category_id' => 'sometimes|integer|min:1', 'brand_id' => 'sometimes|integer|min:1',
+                'stock_id' => 'sometimes|integer|min:1',
                 'after' => 'sometimes|integer|min:0', 'limit' => 'sometimes|integer|min:1|max:200'],
             'snapshot' => ['snapshot_id' => 'sometimes|uuid', 'after' => 'sometimes|integer|min:0', 'limit' => 'sometimes|integer|min:1|max:2000'],
             'changes', 'pull' => ['cursor' => 'sometimes|integer|min:0', 'limit' => 'sometimes|integer|min:1|max:2000'],

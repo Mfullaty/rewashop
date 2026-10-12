@@ -69,6 +69,12 @@ class RouteServiceProvider extends ServiceProvider
 
     Route::middleware('web')->group(base_path('routes/pos_backend.php'));
 
+    // Trusted, separately installable web UI. Activation is checked at request
+    // time so route caching never freezes an addon's enabled/disabled state.
+    if (is_file(base_path('routes/rewa_pos_pro.php'))) {
+      Route::middleware('web')->group(base_path('routes/rewa_pos_pro.php'));
+    }
+
     $this->mapSellerPackageRoutes();
 
     $this->mapDeliveryBoyRoutes();

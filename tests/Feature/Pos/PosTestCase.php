@@ -50,6 +50,7 @@ abstract class PosTestCase extends TestCase
         $this->legacySchema();
         (require database_path('migrations/2026_10_12_000000_create_shared_pos_backend.php'))->up();
         (require database_path('migrations/2026_10_12_000001_add_pos_catalog_indexes.php'))->up();
+        (require database_path('migrations/2026_10_12_000002_create_pos_web_drafts.php'))->up();
         $this->seedStore(1, 'admin'); $this->seedStore(2, 'seller'); $this->seedStore(3, 'seller');
         $this->stock(11, 101, 1, 'admin', 20, '100.00', '00101');
         $this->stock(22, 202, 2, 'seller', 20, '100.00', '00202');
@@ -121,7 +122,8 @@ abstract class PosTestCase extends TestCase
             $t->id(); $t->morphs('tokenable'); $t->string('name'); $t->string('token', 64)->unique();
             $t->text('abilities'); $t->timestamp('last_used_at')->nullable(); $t->timestamp('expires_at')->nullable(); $t->timestamps();
         });
-        Schema::create('addons', function (Blueprint $t) { $t->id(); $t->string('unique_identifier'); $t->boolean('activated'); });
+        Schema::create('addons', function (Blueprint $t) { $t->id(); $t->string('unique_identifier'); $t->boolean('activated');
+            $t->string('name')->nullable(); $t->string('version')->nullable(); $t->string('image')->nullable(); $t->string('purchase_code')->nullable(); $t->timestamps(); });
         Schema::create('business_settings', function (Blueprint $t) { $t->id(); $t->string('type'); $t->text('value')->nullable(); });
         Schema::create('languages', function (Blueprint $t) { $t->id(); $t->string('code'); $t->string('name'); $t->boolean('rtl')->default(false); });
         Schema::create('carts', function (Blueprint $t) {

@@ -942,6 +942,42 @@
             }
           },
           {
+            "name": "category_id",
+            "in": "query",
+            "required": false,
+            "style": "form",
+            "explode": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "brand_id",
+            "in": "query",
+            "required": false,
+            "style": "form",
+            "explode": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "stock_id",
+            "in": "query",
+            "required": false,
+            "style": "form",
+            "explode": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
             "name": "after",
             "in": "query",
             "required": false,
@@ -5237,6 +5273,42 @@
                 "null"
               ],
               "maxLength": 255
+            }
+          },
+          {
+            "name": "category_id",
+            "in": "query",
+            "required": false,
+            "style": "form",
+            "explode": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "brand_id",
+            "in": "query",
+            "required": false,
+            "style": "form",
+            "explode": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "stock_id",
+            "in": "query",
+            "required": false,
+            "style": "form",
+            "explode": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
             }
           },
           {
@@ -9729,6 +9801,21 @@
               "null"
             ],
             "maxLength": 255
+          },
+          "category_id": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1
+          },
+          "brand_id": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1
+          },
+          "stock_id": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1
           },
           "after": {
             "type": "integer",

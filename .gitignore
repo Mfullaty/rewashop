@@ -25,6 +25,11 @@ yarn-error.log
 updates/
 composer.lock
 *.lock
+!/addons/rewa_pos_pro/web/package-lock.json
+/addons/rewa_pos_pro/web/node_modules
+/addons/rewa_pos_pro/web/test-results
+/addons/rewa_pos_pro/web/playwright-report
+/dist
 resources/lang/en.json
 updates.zip
 ecommerce.zip

@@ -35,7 +35,7 @@ export interface PriceSnapshot {
   max_discount_bps?: number;
 }
 
-export interface CatalogItem extends PriceSnapshot { available_quantity: number }
+export interface CatalogItem extends PriceSnapshot { available_quantity: number; image_url?: string | null }
 export interface CatalogSnapshot {
   snapshot_id: UUID;
   high_water_mark: number;
