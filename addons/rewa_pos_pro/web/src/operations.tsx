@@ -1570,8 +1570,43 @@ function Settings(props: Props) {
                                 preserves its stock reservations.
                             </p>
                         </div>
-                        <Badge>Desktop stage follows</Badge>
+                        <Badge>Windows desktop</Badge>
                     </div>
+                    <form onSubmit={(event) => {
+                        event.preventDefault();
+                        const values = new FormData(event.currentTarget);
+                        const recovery = String(values.get("existing_device_id") || "").trim();
+                        const enrolled = Number(values.get("cashier_id"));
+                        const selected = staff.data?.data.find((row) => row.user_id === enrolled);
+                        const grantNames = boot.abilities.filter((ability) => !selected || selected.abilities.includes(ability));
+                        action.run((key) => {
+                            const saleLimit = parseMinor(String(values.get("sale_limit")));
+                            const budgetLimit = parseMinor(String(values.get("budget_limit")));
+                            return api.mutate("devices/pair/approve", {
+                            pairing_id: String(values.get("pairing_id")).trim(),
+                            register_id: Number(values.get("register_id")), cashier_id: enrolled,
+                            abilities: grantNames, offline_allowed: values.get("offline_allowed") === "on",
+                            max_reserved_units: Number(values.get("max_reserved_units")),
+                            max_offline_sale_minor: saleLimit,
+                            max_offline_budget_minor: budgetLimit,
+                            ...(recovery ? {existing_device_id: recovery, reauthorization_reason: String(values.get("recovery_reason"))} : {}),
+                        }, "POST", false, key); }, "Computer approved. Return to the desktop app and confirm connection.");
+                    }}>
+                        <h3>Approve desktop computer</h3>
+                        <Field label="Connection number from desktop"><input name="pairing_id" required /></Field>
+                        <Field label="Register"><select name="register_id" defaultValue={props.registerId}>
+                            {boot.registers.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+                        </select></Field>
+                        <Field label="Cashier user ID"><input name="cashier_id" type="number" min="1" defaultValue={boot.cashier_id} required /></Field>
+                        <label className="check-row"><input name="offline_allowed" type="checkbox" defaultChecked /> Allow offline stock and cash sales</label>
+                        <Field label="Maximum reserved units"><input name="max_reserved_units" type="number" min="1" max="10000" defaultValue="1000" required /></Field>
+                        <Field label="Maximum offline sale amount"><input name="sale_limit" defaultValue="1000000.00" required pattern="[0-9]+([.][0-9]{1,2})?" /></Field>
+                        <Field label="Total offline money budget"><input name="budget_limit" defaultValue="5000000.00" required pattern="[0-9]+([.][0-9]{1,2})?" /></Field>
+                        <Field label="Existing device ID (recovery or computer transfer only)"><input name="existing_device_id" /></Field>
+                        <Field label="Recovery reason"><input name="recovery_reason" minLength={3} /></Field>
+                        <p className="muted">Use a dedicated register per computer. Stop the previous computer before recovering a device. Grants stay within your own and the cashier’s current permissions.</p>
+                        <button className="btn btn-primary" disabled={action.busy}>Approve computer</button>
+                    </form>
                     {devices.error && (
                         <p className="error-text">{devices.error.message}</p>
                     )}

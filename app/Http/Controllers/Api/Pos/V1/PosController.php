@@ -51,15 +51,32 @@ class PosController extends Controller
         elseif ($c->registerIds) { $registers->whereIn('id', $c->registerIds); }
         $settings = DB::table('pos_settings')->where('seller_id', $c->sellerId)->first();
         return response()->json(['schema_version' => 1, 'seller_id' => $c->sellerId, 'owner_type' => $c->ownerType,
-            'currency' => $c->currency, 'minor_exponent' => 2, 'cashier_id' => $c->actor->id,
+            'currency' => $c->currency, 'minor_exponent' => 2, 'cashier_id' => $c->actor->id, 'cashier_name' => $c->actor->name,
             'registers' => $registers->get(), 'settings' => json_decode($settings->settings, true),
             'branding' => app(\App\Pos\Services\StoreProvisioningService::class)->branding($c->sellerId, $c->ownerType),
             'sellers_enabled' => app(\App\Pos\Services\StoreProvisioningService::class)->sellersEnabled(),
             'can_manage_seller_pos' => $c->actor->user_type === 'admin',
             'catalog_cursor' => (int) $settings->change_sequence,
             'device_id' => $c->device?->id, 'last_sequence' => $c->device?->last_sequence,
+            'device' => $c->device ? ['offline_allowed' => (bool) $c->device->offline_allowed && (bool) config('pos.offline_enabled'),
+                'max_reserved_units' => (int) $c->device->max_reserved_units,
+                'max_offline_sale_minor' => (int) $c->device->max_offline_sale_minor,
+                'max_offline_budget_minor' => (int) $c->device->max_offline_budget_minor,
+                'offline_spent_minor' => (int) $c->device->offline_spent_minor] : null,
+            'active_shift' => $this->deviceShift($c),
             'max_discount_bps' => $c->maxDiscountBps, 'abilities' => $c->abilities,
             'offline_policy_key' => app(\App\Pos\Services\OfflinePolicySigner::class)->publicKey()]);
+    }
+
+    private function deviceShift(PosContext $context): ?array
+    {
+        if (!$context->device) { return null; }
+        $shift = DB::table('pos_shifts')->where('seller_id', $context->sellerId)
+            ->where('device_id', $context->device->id)->where('cashier_id', $context->actor->id)
+            ->where('register_id', $context->device->register_id)->where('status', 'open')->first();
+        return $shift ? ['id' => (int) $shift->id, 'client_shift_id' => $shift->client_shift_id,
+            'opening_minor' => (int) $shift->opening_minor, 'opened_at' => $shift->opened_at,
+            'expected_minor' => app(ShiftService::class)->expected((int) $shift->id)] : null;
     }
 
     public function search(PosRequest $request)

@@ -337,3 +337,20 @@ test("seller branding appears on POS and thermal receipts without exposing the g
     await expect(receipt.locator("img")).toHaveAttribute("src", "https://example.com/logo.png");
     await page.emulateMedia({ media: "screen" });
 });
+
+test("owner approves a desktop pairing through store settings", async ({ page }) => {
+    await login(page, 2);
+    const start = await page.request.post('/api/pos/v1/devices/pair/start', {data: {name: 'Amina Windows till'}});
+    expect(start.status()).toBe(201);
+    const pairing = await start.json();
+    await page.getByRole('button', {name: 'Settings', exact: true}).click();
+    await page.getByLabel('Connection number from desktop').fill(pairing.pairing_id);
+    await page.getByRole('button', {name: 'Approve computer', exact: true}).click();
+    await expect(page.getByText('Computer approved. Return to the desktop app and confirm connection.')).toBeVisible();
+    const confirm = await page.request.post('/api/pos/v1/devices/pair/confirm', {data: {pairing_id: pairing.pairing_id, pairing_secret: pairing.pairing_secret}});
+    expect(confirm.status()).toBe(200);
+    const claimed = await confirm.json();
+    expect(claimed.status).toBe('paired');
+    const boot = await page.request.get('/api/pos/v1/bootstrap', {headers: {Authorization: `Bearer ${claimed.token}`}});
+    expect((await boot.json()).seller_id).toBe(2);
+});
