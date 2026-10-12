@@ -269,12 +269,17 @@ class SellerController extends Controller
 
     function single_seller_delete($id){
          $shop = Shop::findOrFail($id);
+        if (\Illuminate\Support\Facades\Schema::hasTable('pos_settings') &&
+            \Illuminate\Support\Facades\DB::table('pos_settings')->where('seller_id', $shop->user_id)->exists()) {
+            throw new \App\Pos\Exceptions\PosException('POS_STORE_HISTORY_PROTECTED', 'Deactivate the seller account to preserve its POS records.', 409);
+        }
 
         // Seller Product and product related data delete
         $products = $shop->user->products;
         foreach ($products as $product) {
             $product_id = $product->id;
-            $product->product_translations()->delete();
+            app(\App\Pos\Services\LegacyGuard::class)->assertProductDeletable((int) $product->id);
+        $product->product_translations()->delete();
             $product->categories()->detach();
             $product->stocks()->delete();
             $product->taxes()->delete();

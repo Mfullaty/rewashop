@@ -316,12 +316,19 @@ class ProductController extends Controller
 
     public function destroy($id)
     {
+        return app(\App\Pos\Services\LegacyGuard::class)->deleteProduct((int) $id,
+            fn () => $this->destroyLegacy($id));
+    }
+
+    private function destroyLegacy($id)
+    {
         $product = Product::findOrFail($id);
 
         if (auth()->user()->id != $product->user_id) {
             return $this->failed(translate('This product is not yours'));
         }
 
+        app(\App\Pos\Services\LegacyGuard::class)->assertProductDeletable((int) $product->id);
         $product->product_translations()->delete();
         $product->categories()->detach();
         $product->stocks()->delete();

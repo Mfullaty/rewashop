@@ -98,7 +98,7 @@ class PurchaseHistoryController extends Controller
             foreach ($order->orderDetails as $key => $orderDetail) {
                 $orderDetail->delivery_status = 'cancelled';
                 $orderDetail->save();
-                product_restock($orderDetail);
+                product_restock($orderDetail, true);
             }
 
             // Order paid notification to Customer, Seller, & Admin

@@ -1,0 +1,59 @@
+name: Shared POS backend
+
+on:
+  pull_request:
+    paths:
+      - 'app/**'
+      - 'config/**'
+      - 'routes/**'
+      - 'database/migrations/*pos*'
+      - 'tests/Feature/Pos/**'
+      - 'phpunit.pos.xml'
+      - '.github/workflows/pos-backend.yml'
+  push:
+    branches: ['codex/shared-pos-backend']
+
+permissions:
+  contents: read
+
+jobs:
+  pos:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        database: [sqlite, mysql]
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: pos-test-only
+          MYSQL_ROOT_HOST: '%'
+          MYSQL_DATABASE: rewashop_pos_test
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    env:
+      POS_TEST_DB: '${{ matrix.database }}'
+      DB_CONNECTION: '${{ matrix.database }}'
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: rewashop_pos_test
+      DB_USERNAME: root
+      DB_PASSWORD: pos-test-only
+      COMPOSER_ALLOW_SUPERUSER: '1'
+      # Resolve the unchanged legacy dependency baseline in test jobs only.
+      # This does not change production Composer security settings or dependencies.
+      COMPOSER_NO_SECURITY_BLOCKING: '1'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: shivammathur/setup-php@d52fc211a0436f8839a587b3b5b8efddab4744ea
+        with:
+          php-version: '8.3'
+          extensions: mbstring, dom, fileinfo, pdo_sqlite, pdo_mysql, gd, zip, bcmath, sodium, intl
+          tools: composer:v2
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-scripts
+      - run: php vendor/bin/phpunit -c phpunit.pos.xml

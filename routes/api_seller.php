@@ -163,7 +163,7 @@ Route::group(['prefix' => 'v2/seller', 'middleware' => ['app_language']], functi
         // ...
 
         // POS
-        Route::controller(PosController::class)->group(function () {
+        Route::controller(PosController::class)->middleware(\App\Http\Middleware\Pos\BlockLegacyPosCheckout::class)->group(function () {
             Route::get('pos/products', 'productsList');
             Route::get('pos/get-customers', 'getCustomers');
             Route::post('pos/update-session-user', 'updateSessionUser');

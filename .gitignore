@@ -8,6 +8,7 @@
 /public/storage
 /public/uploads
 /storage/*.key
+/storage/app/pos-policy.key
 /storage/debugbar
 /vendor
 /temp

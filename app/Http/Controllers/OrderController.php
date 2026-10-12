@@ -140,6 +140,12 @@ class OrderController extends Controller
      */
     public function store(Request $request)
     {
+        return app(\App\Pos\Services\LegacyCheckoutService::class)->checkout((int) auth()->id(),
+            fn () => $this->storeLegacy($request));
+    }
+
+    private function storeLegacy(Request $request)
+    {
         $carts = Cart::where('user_id', Auth::user()->id)->active()->get();
 
         if ($carts->isEmpty()) {
@@ -251,8 +257,7 @@ class OrderController extends Controller
                     $order->delete();
                     return redirect()->route('cart')->send();
                 } elseif ($product->digital != 1) {
-                    $product_stock->qty -= $cartItem['quantity'];
-                    $product_stock->save();
+                    app(\App\Pos\Services\LegacyCheckoutService::class)->deduct($product_stock, (int) $cartItem['quantity'], (int) $order->id, auth()->user());
                 }
 
                 $order_detail = new OrderDetail;
@@ -440,6 +445,7 @@ class OrderController extends Controller
     public function single_order_delete($id)
     {
         $order = Order::findOrFail($id);
+        app(\App\Pos\Services\LegacyGuard::class)->order($order, true);
         if ($order != null) {
             $order->commissionHistory()->delete();
             foreach ($order->orderDetails as $key => $orderDetail) {
@@ -478,6 +484,7 @@ class OrderController extends Controller
     public function update_delivery_status(Request $request)
     {
         $order = Order::findOrFail($request->order_id);
+        $wasCancelled = $order->delivery_status === 'cancelled';
         $order->delivery_viewed = '0';
         $order->delivery_status = $request->status;
 
@@ -524,8 +531,8 @@ class OrderController extends Controller
                 $orderDetail->delivery_status = $request->status;
                 $orderDetail->save();
 
-                if ($request->status == 'cancelled') {
-                    product_restock($orderDetail);
+                if ($request->status == 'cancelled' && !$wasCancelled) {
+                    product_restock($orderDetail, true);
                 }
             }
         } else {
@@ -534,8 +541,8 @@ class OrderController extends Controller
                 $orderDetail->delivery_status = $request->status;
                 $orderDetail->save();
 
-                if ($request->status == 'cancelled') {
-                    product_restock($orderDetail);
+                if ($request->status == 'cancelled' && !$wasCancelled) {
+                    product_restock($orderDetail, true);
                 }
 
                 if (addon_is_activated('affiliate_system')) {
