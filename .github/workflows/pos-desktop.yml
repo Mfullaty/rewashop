@@ -1,0 +1,73 @@
+name: Windows offline POS
+on:
+  workflow_dispatch:
+  pull_request:
+    paths: ['desktop/pos/**', 'contracts/pos-v1.ts', '.github/workflows/pos-desktop.yml']
+  push:
+    branches: ['feat/windows-offline-pos']
+    paths: ['desktop/pos/**', '.github/workflows/pos-desktop.yml']
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: desktop/pos
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: desktop/pos/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run dist:win
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - name: Smoke-test packaged Electron, SQLite and credential protection
+        shell: pwsh
+        run: |
+          $env:REWAPOS_SMOKE_TEST = '1'
+          $process = Start-Process -FilePath 'release/win-unpacked/RewaShop POS.exe' -Wait -PassThru
+          if ($process.ExitCode -ne 0) { throw "Desktop smoke test failed: $($process.ExitCode)" }
+      - name: Write SHA-256 checksums
+        shell: pwsh
+        run: |
+          Get-ChildItem release/*.exe | ForEach-Object {
+            $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower()
+            "$hash  $($_.Name)" | Out-File -Append release/SHA256SUMS.txt -Encoding utf8
+          }
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: RewaShop-POS-Windows
+          path: |
+            desktop/pos/release/*.exe
+            desktop/pos/release/SHA256SUMS.txt
+          retention-days: 30
+  integration:
+    runs-on: ubuntu-latest
+    env:
+      COMPOSER_ALLOW_SUPERUSER: '1'
+      COMPOSER_NO_SECURITY_BLOCKING: '1'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+      - uses: shivammathur/setup-php@d52fc211a0436f8839a587b3b5b8efddab4744ea
+        with:
+          php-version: '8.3'
+          extensions: mbstring, dom, fileinfo, pdo_sqlite, gd, zip, bcmath, sodium, intl
+          tools: composer:v2
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-scripts
+      - run: php vendor/bin/phpunit -c phpunit.pos.xml
+      - name: Real Laravel offline client integration
+        run: |
+          php tests/Support/create-pos-desktop-fixture.php
+          php -S 127.0.0.1:8124 tests/Support/pos-desktop-router.php > /tmp/pos-desktop-server.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          node desktop/pos/test/integration.cjs
