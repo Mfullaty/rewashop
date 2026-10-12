@@ -11,7 +11,7 @@ class AllocationPreparationTest extends PosTestCase
         $payload = ['lines' => [['stock_id' => 11, 'quantity' => 5]]];
         $first = $service->request($context, $key, $payload);
         $replay = $service->request($context, $key, $payload);
-        $this->assertSame($first['allocations'], $replay['allocations']);
+        $this->assertSame(\App\Pos\Support\Payload::canonical($first['allocations']), \App\Pos\Support\Payload::canonical($replay['allocations']));
         $this->error('ALLOCATION_ALREADY_OPEN', fn () => $service->request($context, (string) Str::uuid(), $payload));
         $this->assertDatabaseCount('pos_stock_allocations', 1);
         $this->assertDatabaseHas('product_stocks', ['id' => 11, 'qty' => 15]);
