@@ -21,6 +21,7 @@
             <p id="menu-search-empty" class="rewa-menu-empty" role="status" hidden>{{ translate('Nothing Found') }}</p>
             <ul class="aiz-side-nav-list" id="search-menu"></ul>
             <ul class="aiz-side-nav-list" id="main-menu" data-toggle="aiz-side-menu">
+                @includeIf('addons.rewa-pos.menu', ['posArea' => 'admin'])
 
                 @can('admin_dashboard')
                     <li class="aiz-side-nav-item">

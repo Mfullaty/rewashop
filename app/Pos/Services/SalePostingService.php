@@ -146,7 +146,10 @@ class SalePostingService
             $receiptNumber = $register->code.'-'.str_pad((string) $saleId, 10, '0', STR_PAD_LEFT);
             $receipt = ['number' => $receiptNumber, 'client_sale_id' => $data['client_sale_id'],
                 'sale_id' => $saleId, 'order_id' => $orderId, 'order_code' => $orderCode,
-                'store' => ['seller_id' => $context->sellerId, 'name' => DB::table('users')->where('id', $context->sellerId)->value('name')],
+                'store' => ['seller_id' => $context->sellerId, 'name' => ($context->ownerType === 'seller'
+                    ? DB::table('shops')->where('user_id', $context->sellerId)->value('name')
+                    : DB::table('business_settings')->where('type', 'site_name')->value('value'))
+                    ?: DB::table('users')->where('id', $context->sellerId)->value('name')],
                 'register' => $register->code, 'cashier' => $context->actor->name, 'occurred_at' => $occurred->toIso8601String(),
                 'customer' => $customer ?: ['name' => 'Walk-in customer'], 'currency' => $context->currency,
                 'lines' => $lines, 'tenders' => $tenders, 'subtotal_minor' => $subtotal,

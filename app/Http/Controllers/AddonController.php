@@ -105,6 +105,23 @@ class AddonController extends Controller
                 $zip = new ZipArchive;
                 $res = $zip->open(base_path('public/' . $path));
 
+                // POS Pro is allowlisted and validated before extraction. Its
+                // core schema is deployed separately; an uploaded ZIP cannot
+                // overwrite the application's providers or execute SQL hooks.
+                if ($res === true && $zip->locateName('rewa_pos_pro/config.json') !== false) {
+                    try {
+                        app(\App\Pos\Services\WebAddonInstaller::class)->install($zip);
+                        flash(translate('RewaShop POS Pro installed successfully'))->success();
+                    } catch (\Throwable $e) {
+                        report($e);
+                        flash(translate('POS Pro installation failed. Check its prerequisites and the application log.'))->error();
+                    } finally {
+                        $zip->close();
+                        Storage::disk('local')->delete($path);
+                    }
+                    return redirect()->route('addons.index');
+                }
+
                 $random_dir = Str::random(10);
 
                 $dir = trim($zip->getNameIndex(0), '/');
@@ -299,6 +316,10 @@ class AddonController extends Controller
             return 0;
         }
         $addon = Addon::find($request->id);
+        if ($addon->unique_identifier === \App\Pos\Services\WebAddonInstaller::ID && (int) $request->status === 1) {
+            try { app(\App\Pos\Services\WebAddonInstaller::class)->prerequisites(); }
+            catch (\RuntimeException $e) { return response()->json(['error' => $e->getMessage()], 422); }
+        }
         $addon->activated = $request->status;
         $addon->save();
         if($addon->unique_identifier == 'gst_system'){

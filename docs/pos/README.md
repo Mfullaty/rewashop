@@ -1,6 +1,6 @@
 # Shared Laravel POS backend
 
-This backend gives RewaShop's future web addon and desktop application one sale, stock, tender and receipt service. The web addon and desktop UI remain separate implementation stages.
+This backend gives RewaShop's web addon and future desktop application one sale, stock, tender and receipt service. The online addon source is in `addons/rewa_pos_pro/web`. Start with [web-addon-install.md](web-addon-install.md), [web-operator-guide.md](web-operator-guide.md) and [web-feature-matrix.md](web-feature-matrix.md). The offline desktop application is the next user-review stage.
 
 ## Product ownership
 

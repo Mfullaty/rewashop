@@ -1,0 +1,62 @@
+name: POS web addon
+
+on:
+  pull_request:
+    paths:
+      - 'addons/rewa_pos_pro/**'
+      - 'public/addons/rewa-pos/**'
+      - 'resources/views/addons/rewa-pos/**'
+      - 'app/**'
+      - 'routes/**'
+      - 'database/migrations/*pos*'
+      - 'tests/**'
+      - 'scripts/package-pos-web.py'
+      - 'docs/pos/web-*.md'
+      - '.github/workflows/pos-web-addon.yml'
+  push:
+    branches: ['codex/pos-web-addon']
+
+permissions:
+  contents: read
+
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    env:
+      COMPOSER_ALLOW_SUPERUSER: '1'
+      COMPOSER_NO_SECURITY_BLOCKING: '1'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: addons/rewa_pos_pro/web/package-lock.json
+      - uses: shivammathur/setup-php@d52fc211a0436f8839a587b3b5b8efddab4744ea
+        with:
+          php-version: '8.3'
+          extensions: mbstring, dom, fileinfo, pdo_sqlite, gd, zip, bcmath, sodium, intl
+          tools: composer:v2
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-scripts
+      - run: npm --prefix addons/rewa_pos_pro/web ci
+      - run: npm --prefix addons/rewa_pos_pro/web run build
+      - run: npm --prefix addons/rewa_pos_pro/web test
+      - run: python3 scripts/package-pos-web.py
+      - run: php vendor/bin/phpunit -c phpunit.pos.xml
+      - run: npm --prefix addons/rewa_pos_pro/web exec -- playwright install --with-deps chromium
+      - name: Real Laravel cashier flows
+        run: |
+          php tests/Support/create-pos-web-fixture.php
+          php -S 127.0.0.1:8123 -t public tests/Support/pos-web-router.php > /tmp/pos-web-server.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          npm --prefix addons/rewa_pos_pro/web run test:browser
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: pos-web-addon-review
+          path: |
+            dist/**
+            addons/rewa_pos_pro/web/test-results/**
+          retention-days: 14

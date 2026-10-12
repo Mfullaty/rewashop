@@ -11,7 +11,7 @@ on:
       - 'phpunit.pos.xml'
       - '.github/workflows/pos-backend.yml'
   push:
-    branches: ['codex/shared-pos-backend']
+    branches: ['codex/shared-pos-backend', 'codex/pos-web-addon']
 
 permissions:
   contents: read
@@ -56,4 +56,5 @@ jobs:
           tools: composer:v2
           coverage: none
       - run: composer install --no-interaction --prefer-dist --no-scripts
+      - run: python3 scripts/package-pos-web.py
       - run: php vendor/bin/phpunit -c phpunit.pos.xml

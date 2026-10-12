@@ -65,6 +65,9 @@ class PosController extends Controller
         $q = app(AuthorizationService::class)->stocks($c)->where('s.id', '>', (int) ($data['after'] ?? 0));
         if (!empty($data['barcode'])) { $q->where('p.barcode', $data['barcode']); }
         if (!empty($data['sku'])) { $q->where('s.sku', $data['sku']); }
+        if (isset($data['category_id'])) { $q->where('p.category_id', $data['category_id']); }
+        if (isset($data['brand_id'])) { $q->where('p.brand_id', $data['brand_id']); }
+        if (isset($data['stock_id'])) { $q->where('s.id', $data['stock_id']); }
         if (!empty($data['q'])) {
             $term = $data['q'];
             $q->where(fn ($w) => $w->where('p.name', 'like', '%'.addcslashes($term, '%_\\').'%')
@@ -81,6 +84,15 @@ class PosController extends Controller
         $pricing->prime($products->keys()->all());
         $result = $stocks->map(fn ($s) => $pricing->snapshot($s, $products[$s->product_id], $settings)
             + ['available_quantity' => (int) $s->qty]);
+        if (\Illuminate\Support\Facades\Schema::hasColumn('uploads', 'file_name')) {
+            $images = DB::table('uploads')->whereIn('id', $result->pluck('image_id')->filter())->get()->keyBy('id');
+            $result = $result->map(function ($item) use ($images) {
+                $upload = $images[$item['image_id']] ?? null;
+                $url = $upload ? ($upload->external_link ?: my_asset($upload->file_name)) : null;
+                $item['image_url'] = $url && preg_match('~^https?://~i', $url) ? $url : null;
+                return $item;
+            });
+        }
         return response()->json(['data' => $result, 'has_more' => $more, 'next_after' => $ids->last() ?? (int) ($data['after'] ?? 0)]);
     }
 
@@ -127,7 +139,7 @@ class PosController extends Controller
     public function saleShow(Request $request, int $id)
     {
         $c = $this->context($request); $c->require('pos:sale:read'); $sale = $c->scoped('pos_sales', $id);
-        return response()->json(['sale' => $sale, 'lines' => DB::table('pos_sale_lines')->where('sale_id', $id)->get()->map(function ($r) { $r->snapshot = json_decode($r->snapshot, true); return $r; }),
+        return response()->json(['sale' => $sale, 'receipt_id' => DB::table('pos_receipts')->where('sale_id', $id)->value('id'), 'lines' => DB::table('pos_sale_lines')->where('sale_id', $id)->get()->map(function ($r) { $r->snapshot = json_decode($r->snapshot, true); return $r; }),
             'tenders' => DB::table('pos_tenders')->where('sale_id', $id)->get(), 'refunds' => DB::table('pos_refunds')->where('sale_id', $id)->get()]);
     }
 
