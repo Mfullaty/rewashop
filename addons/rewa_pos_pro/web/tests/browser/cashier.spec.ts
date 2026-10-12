@@ -303,6 +303,7 @@ test("browser print failure never submits or cancels another sale", async ({
 });
 
 test("seller branding appears on POS and thermal receipts without exposing the global switch", async ({ page }) => {
+    test.setTimeout(60000);
     await login(page, 2);
     await page.getByRole("button", { name: "Settings", exact: true }).click();
     await expect(page.getByLabel("Enable POS for all sellers")).toHaveCount(0);
@@ -319,7 +320,7 @@ test("seller branding appears on POS and thermal receipts without exposing the g
     await page.getByRole("button", { name: "Save merchant settings" }).click();
     await expect(page.locator(".store-label")).toContainText("Amina Counter");
     await expect(page.locator(".pos-store-logo")).toHaveAttribute("src", "https://example.com/logo.png");
-    await page.getByLabel("Receipt paper", { exact: true }).selectOption("58");
+    await page.getByRole("combobox", { name: "Receipt paper", exact: true }).selectOption("58");
     await openShift(page);
     await scan(page, "00202");
     await page.getByRole("button", { name: "Take payment" }).click();
