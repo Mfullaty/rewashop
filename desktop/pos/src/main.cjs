@@ -1,12 +1,14 @@
 'use strict';
-const {app, BrowserWindow, ipcMain, dialog, safeStorage, shell} = require('electron');
+const {app, BrowserWindow, ipcMain, dialog, safeStorage, shell, protocol} = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
 const {randomUUID} = require('node:crypto');
 const {Store} = require('./store.cjs');
 const {Client} = require('./client.cjs');
+const {Images, hash} = require('./images.cjs');
+protocol.registerSchemesAsPrivileged([{scheme:'pos-image',privileges:{standard:true,secure:true,supportFetchAPI:true}}]);
 const {seal, unseal} = require('./backup.cjs');
-let window, store, client, serial = Promise.resolve();
+let window, store, client, images, serial = Promise.resolve();
 if (!app.requestSingleInstanceLock()) app.quit();
 app.on('second-instance', () => { window?.show(); window?.focus(); });
 app.on('window-all-closed', () => app.quit());
@@ -47,6 +49,8 @@ async function execute(command, data = {}) {
     case 'pairStart': return client.pairStart(data.origin, data.name);
     case 'pairConfirm': return client.pairConfirm();
     case 'sync': return client.sync();
+    case 'disconnect': return client.disconnect();
+    case 'connect': return client.connect();
     case 'quote': return client.quote(data.cart, data.mode);
     case 'checkout': return client.checkout(data);
     case 'openShift': return client.openShift(data.opening_minor);
@@ -97,11 +101,13 @@ async function printReceipt(r, options) {
   const width = options.width === 58 ? 58 : 80, money = n => new Intl.NumberFormat('en-NG', {style: 'currency', currency: r.currency}).format(n / 100);
   const w = new BrowserWindow({show: false, webPreferences: {sandbox: true, contextIsolation: true, nodeIntegration: false}});
   const storeBrand = r.store || {}, logo = store.get('image', r.store?.logo_url), rows = r.lines.map(l => `<tr><td>${escape(l.snapshot?.name)} ${escape(l.snapshot?.variant)} × ${escape(l.quantity)}</td><td>${escape(money(l.total_minor))}</td></tr>`).join('');
-  const html = `<!doctype html><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:"><style>@page{size:${width}mm auto;margin:3mm}body{font:11px Arial;width:${width - 8}mm;margin:auto}h1{font-size:16px;text-align:center}p{text-align:center}table{width:100%}td{padding:4px 0;vertical-align:top}td:last-child{text-align:right}hr{border:0;border-top:1px dashed #333}</style>${logo ? `<p><img alt="Store logo" src="${escape(logo)}" width="80"></p>` : ''}<h1>${escape(storeBrand.name)}</h1><p>${escape(storeBrand.address)}<br>${escape(storeBrand.phone)} ${escape(storeBrand.email)}<br>${escape(storeBrand.tax_details)}</p><hr><p>${escape(r.number)}<br>${escape(r.client_sale_id)}<br>${escape(r.occurred_at)}<br>${escape(r.customer?.name)}</p><table>${rows}</table><hr><table><tr><td>Discount</td><td>${escape(money(r.discount_minor))}</td></tr><tr><td>Tax</td><td>${escape(money(r.tax_minor))}</td></tr><tr><td><b>Total</b></td><td><b>${escape(money(r.total_minor))}</b></td></tr>${r.tenders.map(t => `<tr><td>${escape(t.method)}</td><td>${escape(money(t.amount_minor))}</td></tr>${t.method === 'cash' ? `<tr><td>Received / Change</td><td>${escape(money(t.received_minor))} / ${escape(money(t.change_minor))}</td></tr>` : ''}`).join('')}</table><p>${escape(r.sync_status === 'pending' ? 'Recorded locally. Awaiting sync.' : r.sync_status === 'needs_review' ? 'Recorded locally. Supervisor review required.' : r.payment_status || r.server?.payment_status || 'Recorded')}<br>${options.reprint ? 'COPY' : ''}</p><hr><p>${escape(storeBrand.footer)}</p>`;
+  const html = `<!doctype html><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:"><style>@page{size:${width}mm auto;margin:3mm}body{font:11px Arial;width:${width - 8}mm;margin:auto}h1{font-size:16px;text-align:center}p{text-align:center}table{width:100%}td{padding:4px 0;vertical-align:top}td:last-child{text-align:right}hr{border:0;border-top:1px dashed #333}</style>${logo ? `<p><img alt="Store logo" src="${escape(logo)}" width="80"></p>` : ''}<h1>${escape(storeBrand.name)}</h1><p>${escape(storeBrand.address)}<br>${escape(storeBrand.phone)} ${escape(storeBrand.email)}<br>${escape(storeBrand.tax_details)}</p><hr><p>${escape(r.number)}<br>${escape(r.client_sale_id)}<br>${escape(r.occurred_at)}<br>${escape(r.customer?.name)}</p><table>${rows}</table><hr><table><tr><td>Discount</td><td>${escape(money(r.discount_minor))}</td></tr><tr><td>Tax</td><td>${escape(money(r.tax_minor))}</td></tr><tr><td><b>Total</b></td><td><b>${escape(money(r.total_minor))}</b></td></tr>${r.tenders.map(t => `<tr><td>${escape(t.method)}</td><td>${escape(money(t.amount_minor))}</td></tr>${t.method === 'cash' ? `<tr><td>Received / Change</td><td>${escape(money(t.received_minor))} / ${escape(money(t.change_minor))}</td></tr>` : ''}`).join('')}</table><p>${escape(r.sync_status === 'pending' ? 'Recorded locally. Awaiting sync.' : r.sync_status === 'needs_review' ? 'Saved on this computer. Waiting for upload.' : r.payment_status || r.server?.payment_status || 'Recorded')}<br>${options.reprint ? 'COPY' : ''}</p><hr><p>${escape(storeBrand.footer)}</p>`;
   try { await w.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html)); await w.webContents.executeJavaScript('Promise.all(Array.from(document.images).map(image => image.decode().catch(() => {})))'); await new Promise((resolve, reject) => w.webContents.print({silent: !!options.printer, deviceName: options.printer || undefined, printBackground: false}, (ok, reason) => ok ? resolve() : reject(Error(reason)))); } finally { w.destroy(); }
 }
 app.whenReady().then(() => {
   fs.mkdirSync(app.getPath('userData'), {recursive: true}); store = new Store(path.join(app.getPath('userData'), 'pos.sqlite'));
+  images = new Images(path.join(app.getPath('userData'), 'product-images'), store);
+  protocol.handle('pos-image', request => { const picture=images.read(request.url); return picture ? new Response(picture.bytes,{headers:{'Content-Type':picture.type,'Cache-Control':'public, max-age=86400'}}) : new Response('Picture unavailable',{status:404}); });
   // Electron 44 safeStorage supports synchronous encryption. Fail closed if no
   // operating-system credential protection is available.
   client = new Client(store, transport, {
@@ -120,6 +126,9 @@ app.whenReady().then(() => {
       const errors = [];
       smokeWindow.webContents.on('console-message', details => { if (details.level === 'error') errors.push(details.message); });
       await smokeWindow.loadFile(path.join(__dirname, 'index.html'));
+      const picture=hash('smoke-picture'); fs.writeFileSync(path.join(images.directory,picture),Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aR9sAAAAASUVORK5CYII=','base64')); store.put('photo',picture,{type:'image/png'});
+      await smokeWindow.webContents.executeJavaScript(`(async()=>{const img=new Image();img.src='pos-image://cache/${picture}';document.body.append(img);await img.decode();img.remove();})()`);
+      fs.unlinkSync(path.join(images.directory,picture)); store.remove('photo',picture);
       // Validate the preload bridge and bundled renderer, without API access.
       if (!await smokeWindow.webContents.executeJavaScript('typeof window.pos.command === "function" && !!document.querySelector("#content")')) throw Error('Preload bridge failed.');
       await smokeWindow.webContents.executeJavaScript('window.pos.command("state")');
@@ -136,7 +145,7 @@ app.whenReady().then(() => {
   ipcMain.handle('pos:command', (event, command, data) => {
     if (event.sender !== window.webContents || event.senderFrame !== window.webContents.mainFrame) throw Error('Unauthorized frame.');
     if (typeof command !== 'string' || JSON.stringify(data || {}).length > 1048576) throw Error('Invalid request.');
-    const task = serial.then(async () => { const result = await execute(command, data); if (['sync', 'pairConfirm'].includes(command)) await cacheBrandLogo(); return result; }); serial = task.catch(() => {});
+    const task = serial.then(async () => { const result = await execute(command, data); if (['sync', 'pairConfirm', 'connect'].includes(command) && !store.meta('manual_offline')) { await Promise.all([cacheBrandLogo(), images.cache(store.list('catalog'))]); return {...result,...client.state()}; } return result; }); serial = task.catch(() => {});
     return task.then(result => ({ok: true, result}), error => ({ok: false, error: error.message, code: error.code}));
   });
   window.loadFile(path.join(__dirname, 'index.html'));

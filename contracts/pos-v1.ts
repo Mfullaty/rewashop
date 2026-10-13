@@ -35,7 +35,7 @@ export interface PriceSnapshot {
   max_discount_bps?: number;
 }
 
-export interface CatalogItem extends PriceSnapshot { available_quantity: number; image_url?: string | null }
+export interface CatalogItem extends PriceSnapshot { available_quantity: number; image_url?: string | null; offline_policy?: SignedCatalogPolicy }
 export interface CatalogSnapshot {
   snapshot_id: UUID;
   high_water_mark: number;
@@ -110,7 +110,7 @@ export interface OnlineSale {
   schema_version?: 1;
   client_sale_id: UUID;
   register_id: number;
-  shift_id: number;
+  shift_id?: number;
   currency: Currency;
   occurred_at?: Timestamp;
   grand_total_minor?: Minor;
@@ -118,6 +118,14 @@ export interface OnlineSale {
   lines: OnlineSaleLine[];
   tenders: TenderInput[];
 }
+export interface SignedCatalogPolicy extends PolicyPublicKey {
+  signature: string;
+  policy: { schema_version: 1; mode: "catalog"; seller_id: number; device_id: UUID;
+    register_id: number; stock_id: number; price_snapshot: PriceSnapshot & {max_discount_bps: number};
+    issued_at: Timestamp; expires_at: Timestamp; };
+}
+export interface CachedSaleLine extends Omit<OfflineSaleLine, "allocation_id" | "policy_signature"> { catalog_policy: SignedCatalogPolicy }
+export interface CachedOfflineSale extends Omit<OfflineSale, "lines"> { inventory_mode: "catalog"; lines: CachedSaleLine[] }
 export interface OfflineSaleLine {
   stock_id: number;
   quantity: number;
@@ -135,6 +143,7 @@ export interface OfflineSale extends Omit<OnlineSale, "shift_id" | "occurred_at"
   tenders: Array<TenderInput & { method: "cash" }>;
 }
 export interface SaleResult {
+  stock_difference_units?: number;
   sale_id: number;
   order_id: number;
   client_sale_id: UUID;
@@ -145,6 +154,7 @@ export interface SaleResult {
 }
 
 export interface ShiftOpen {
+  automatic?: boolean;
   client_shift_id: UUID;
   register_id: number;
   opening_minor: Minor;

@@ -178,6 +178,7 @@ export interface Report {
         net_tax_minor: number;
         discount_minor: number;
     };
+    stock_difference_units: number;
     unsettled_sales_minor: number;
     pending_refund_payouts_minor: number;
     tenders: { method: string; status: string; amount_minor: number }[];

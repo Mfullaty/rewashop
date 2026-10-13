@@ -1,17 +1,20 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useId, type ReactNode } from "react";
 import { X, LoaderCircle } from "lucide-react";
 export function Modal({
     title,
     children,
     onClose,
     wide = false,
+    closeLabel = "Close dialog",
 }: {
     title: string;
     children: ReactNode;
     onClose: () => void;
     wide?: boolean;
+    closeLabel?: string;
 }) {
     const ref = useRef<HTMLDialogElement>(null);
+    const titleId = useId();
     useEffect(() => {
         ref.current?.showModal();
         const dialog = ref.current;
@@ -21,16 +24,17 @@ export function Modal({
         <dialog
             className={`rp-modal ${wide ? "rp-modal-wide" : ""}`}
             ref={ref}
+            aria-labelledby={titleId}
             onCancel={(event) => {
                 event.preventDefault();
                 onClose();
             }}
         >
             <header>
-                <h2>{title}</h2>
+                <h2 id={titleId}>{title}</h2>
                 <button
                     className="icon-button"
-                    aria-label="Close dialog"
+                    aria-label={closeLabel}
                     onClick={onClose}
                 >
                     <X size={20} />

@@ -14,7 +14,7 @@ function verifyPolicy(signed, boot, now = Date.now()) {
   const key = createPublicKey({key: Buffer.concat([Buffer.from('302a300506032b6570032100', 'hex'), publicBytes]), format: 'der', type: 'spki'});
   if (!verify(null, Buffer.from(canonical(p)), key, Buffer.from(signed.signature, 'base64'))) throw Error('Offline policy signature is invalid.');
   if (p.schema_version !== 1 || p.device_id !== boot.device_id || p.seller_id !== boot.seller_id || p.register_id !== boot.registers[0]?.id || p.stock_id !== p.price_snapshot.stock_id || p.price_snapshot.currency !== boot.currency) throw Error('Offline policy belongs to another device or store.');
-  if (!Number.isFinite(Date.parse(p.expires_at)) || now > Date.parse(p.expires_at)) throw Error('Offline stock permission expired. Connect and prepare stock again.');
+  if (!Number.isFinite(Date.parse(p.expires_at)) || now > Date.parse(p.expires_at)) throw Error('This downloaded product list needs refreshing. Click Connect and Sync before selling this item.');
   return p;
 }
 module.exports = {canonical, verifyPolicy};

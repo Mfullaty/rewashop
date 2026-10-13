@@ -10,10 +10,11 @@ class ShiftService
 {
     public function open(PosContext $context, string $key, array $data): array
     {
-        $context->require('pos:shift:write');
+        $context->require(!empty($data['automatic']) && ($data['opening_minor'] ?? -1) === 0 ? 'pos:sale:write' : 'pos:shift:write');
         return app(TransactionService::class)->once($context, $key, 'shift.open', $data, function () use ($context, $data) {
             $register = $context->register((int) $data['register_id']);
-            if ($register->active_shift_id) {
+            $automatic = !empty($data['automatic']);
+            if (!$automatic && $register->active_shift_id) {
                 throw new PosException('SHIFT_ALREADY_OPEN', 'This register already has an open shift.', 409);
             }
             if (DB::table('pos_shifts')->where('client_shift_id', $data['client_shift_id'])->exists()) {
@@ -26,11 +27,11 @@ class ShiftService
             $id = DB::table('pos_shifts')->insertGetId([
                 'client_shift_id' => $data['client_shift_id'], 'seller_id' => $context->sellerId,
                 'register_id' => $register->id, 'cashier_id' => $context->actor->id,
-                'device_id' => $context->device?->id, 'status' => 'open', 'opening_minor' => $data['opening_minor'],
+                'automatic' => $automatic, 'device_id' => $context->device?->id, 'status' => 'open', 'opening_minor' => $data['opening_minor'],
                 'opened_at' => \Carbon\CarbonImmutable::parse($openedAt)->utc(),
                 'created_at' => now('UTC'), 'updated_at' => now('UTC'),
             ]);
-            DB::table('pos_registers')->where('id', $register->id)->update(['active_shift_id' => $id]);
+            if (!$automatic) { DB::table('pos_registers')->where('id', $register->id)->update(['active_shift_id' => $id]); }
             app(AuditService::class)->record($context, 'shift.open', (string) $id, $data);
             return ['shift_id' => $id, 'client_shift_id' => $data['client_shift_id'], 'status' => 'open'];
         });
@@ -41,12 +42,24 @@ class ShiftService
         $shift = $context->scoped('pos_shifts', $id);
         $register = $context->register((int) $shift->register_id);
         if ($shift->status !== 'open' || (int) $shift->cashier_id !== (int) $context->actor->id ||
-            (int) $register->active_shift_id !== $id ||
+            (!$shift->automatic && (int) $register->active_shift_id !== $id) ||
             ($registerId && (int) $shift->register_id !== $registerId) ||
-            ($context->device && $shift->device_id !== $context->device->id)) {
+            ($shift->device_id !== $context->device?->id)) {
             throw new PosException('SHIFT_UNAVAILABLE', 'An open shift belonging to this cashier and register is required.', 409);
         }
         return $shift;
+    }
+
+    public function automatic(PosContext $context, int $registerId): object
+    {
+        $context->register($registerId);
+        $existing = DB::table('pos_shifts')->where('seller_id', $context->sellerId)->where('register_id', $registerId)
+            ->where('cashier_id', $context->actor->id)->where('device_id', $context->device?->id)->where('status', 'open')->first();
+        if ($existing) { return $existing; }
+        $id = (string) \Illuminate\Support\Str::uuid();
+        $result = $this->open($context, $id, ['client_shift_id' => $id, 'register_id' => $registerId,
+            'opening_minor' => 0, 'automatic' => true]);
+        return DB::table('pos_shifts')->where('id', $result['shift_id'])->first();
     }
 
     public function expected(int $id): int
@@ -77,7 +90,7 @@ class ShiftService
                 'variance_minor' => $variance, 'close_reason' => $data['reason'] ?? null,
                 'closed_at' => $closedAt, 'updated_at' => now('UTC'),
             ]);
-            DB::table('pos_registers')->where('id', $shift->register_id)->update(['active_shift_id' => null]);
+            DB::table('pos_registers')->where('id', $shift->register_id)->where('active_shift_id', $id)->update(['active_shift_id' => null]);
             app(AuditService::class)->record($context, 'shift.close', (string) $id, ['expected_minor' => $expected, 'variance_minor' => $variance] + $data);
             return ['shift_id' => $id, 'status' => 'closed', 'expected_minor' => $expected,
                 'counted_minor' => $data['counted_minor'], 'variance_minor' => $variance];

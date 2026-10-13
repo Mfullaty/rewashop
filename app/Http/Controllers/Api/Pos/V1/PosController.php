@@ -50,7 +50,7 @@ class PosController extends Controller
         if ($c->device) { $registers->where('id', $c->device->register_id); }
         elseif ($c->registerIds) { $registers->whereIn('id', $c->registerIds); }
         $settings = DB::table('pos_settings')->where('seller_id', $c->sellerId)->first();
-        return response()->json(['schema_version' => 1, 'seller_id' => $c->sellerId, 'owner_type' => $c->ownerType,
+        return response()->json(['server_time' => now('UTC')->toIso8601String(), 'offline_catalog_sales' => true, 'schema_version' => 1, 'seller_id' => $c->sellerId, 'owner_type' => $c->ownerType,
             'currency' => $c->currency, 'minor_exponent' => 2, 'cashier_id' => $c->actor->id, 'cashier_name' => $c->actor->name,
             'registers' => $registers->get(), 'settings' => json_decode($settings->settings, true),
             'branding' => app(\App\Pos\Services\StoreProvisioningService::class)->branding($c->sellerId, $c->ownerType),
@@ -219,7 +219,7 @@ class PosController extends Controller
         $tenders = DB::table('pos_tenders')->whereIn('sale_id', (clone $q)->select('id'))->selectRaw('method, status, SUM(amount_minor) as amount_minor')
             ->groupBy('method', 'status')->get()->map(function ($row) { $row->amount_minor = (int) $row->amount_minor; return $row; });
         return response()->json(['currency' => $c->currency, 'totals' => $totals, 'tenders' => $tenders,
-            'unsettled_sales_minor' => (int) $pending, 'pending_refund_payouts_minor' => (int) $refunds]);
+            'stock_difference_units' => (int) DB::table('pos_stock_shortfalls')->whereIn('sale_id', (clone $q)->select('id'))->sum('quantity'), 'unsettled_sales_minor' => (int) $pending, 'pending_refund_payouts_minor' => (int) $refunds]);
     }
 
     public function registers(Request $r)

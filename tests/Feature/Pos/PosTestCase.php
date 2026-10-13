@@ -52,6 +52,7 @@ abstract class PosTestCase extends TestCase
         (require database_path('migrations/2026_10_12_000001_add_pos_catalog_indexes.php'))->up();
         (require database_path('migrations/2026_10_12_000002_create_pos_web_drafts.php'))->up();
         (require database_path('migrations/2026_10_12_000003_add_pos_defaults.php'))->up();
+        (require database_path('migrations/2026_10_14_000000_simplify_offline_pos.php'))->up();
         $this->seedStore(1, 'admin'); $this->seedStore(2, 'seller'); $this->seedStore(3, 'seller');
         $this->stock(11, 101, 1, 'admin', 20, '100.00', '00101');
         $this->stock(22, 202, 2, 'seller', 20, '100.00', '00202');
