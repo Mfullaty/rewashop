@@ -17,7 +17,7 @@ The chosen EXE uses web UI technology internally. These options are not mutually
 
 ## Existing backend paths
 
-- `routes/pos_api_v1.php`: stateless device bearer authentication and offline-only allocation/sync routes.
+- `routes/pos_api_v1.php`: stateless device bearer authentication and offline catalog policies and legacy allocation/sync routes.
 - `routes/pos_shared_operations.php`: capabilities, bootstrap, catalog, sales, returns, receipts, shifts and reports shared with browser POS.
 - `routes/pos_backend.php`: browser session/CSRF management operations.
 - `SalePostingService`: one authoritative sale/tender/stock/order/receipt transaction.
@@ -29,15 +29,15 @@ The desktop never writes production SQL directly, accepts arbitrary seller IDs o
 
 ## Local journal
 
-`Store` uses Electron's bundled Node SQLite module, WAL, synchronous FULL and explicit transactions. Tables retain keyed snapshots, immutable sync events and durable direct-request identities. A cash sale updates reserve consumption, till, receipt and upload event together. Network I/O never runs inside a local SQLite transaction.
+`Store` uses Electron's bundled Node SQLite module, WAL, synchronous FULL and explicit transactions. Tables retain keyed snapshots, immutable sync events and durable direct-request identities. A cash sale saves its signed catalog price, till, receipt and upload event together. Local availability subtracts saved sales until a complete catalog refresh includes them. Legacy reserve consumption is retained for compatibility. Network I/O never runs inside a local SQLite transaction.
 
 Electron's main process owns credentials, storage, pricing, signatures, network and printing. The sandboxed renderer gets a bounded command bridge, no Node APIs and no bearer credential. All command execution is serialized. Single-instance locking prevents two application processes from selling against one database. HTTPS requests refuse redirects and bind bearer credentials to the selected store origin. Backups use scrypt and AES-256-GCM and omit bearer credentials.
 
-Every offline sale line verifies a pinned Ed25519 policy and enforces its device/store/register/stock/currency, price, expiry, quantity and budget. Whole quantities and integer minor units match Laravel's rounding, including inclusive tax and GST. No offline overrides or external-tender capture are invented.
+Every offline sale line verifies a pinned Ed25519 policy and enforces its device/store/register/stock/currency, price and expiry. Version 1.1 uses downloaded quantities rather than reservation and exposure limits. Legacy reserved sales retain their original limits. Whole quantities and integer minor units match Laravel's rounding, including inclusive tax and GST. No offline overrides or external-tender capture are invented.
 
 ## Sync and recovery
 
-Sync refreshes authenticated device bootstrap, recovers saved direct requests, queries unknown event acknowledgments, pushes pending events in sequence, applies catalog cursor pages and reconciles allocation metadata. A dropped reply reuses its original identity. Durable failures retain payment evidence and stop further financial activity. A permitted supervisor can retry the immutable payload with a new event identity and sequence after addressing the cause. The original event remains.
+Sync refreshes authenticated device bootstrap, recovers saved direct requests, queries unknown event acknowledgments, pushes pending events in sequence, applies catalog cursor pages and reconciles allocation metadata. A dropped reply reuses its original identity. Durable failures retain payment evidence and remain visible without locking unrelated checkout. Known account revocation, transfer and incomplete restoration still block financial writes. A permitted supervisor can retry the immutable payload with a new event identity and sequence after addressing the cause. The original event remains.
 
 Restored databases remain unable to sell offline until device recovery and sync complete. Server-ahead sequence or reserve consumption fails restoration instead of silently resetting counters. A transfer export locks its source and preserves the journal. Supervised recovery rotates the original device's credentials; staff must prevent simultaneous offline copies, which no online-only revocation can physically stop.
 
@@ -69,3 +69,11 @@ Remote authority and independent payment verification cannot be promised while d
 The Windows workflow checks bundled SQLite, OS credential encryption, preload and renderer after packaging. Real printer output, Windows SmartScreen/signing reputation and store-specific stock writers still require deployment/device validation. Unit tests and Linux packaging do not substitute for that validation.
 
 One open offline allocation per product per device is enforced during preparation. Sync and release unused stock before preparing that product again. For older duplicated allocations, reconcile them and request one replacement quantity.
+
+## Version 1.1 downloaded stock
+
+`OfflineCatalogService` signs device-scoped catalog prices. It applies offline sale deltas to the current locked stock rather than replacing its quantity. A concurrent shortage records a sale-linked `pos_stock_shortfalls` row; stock stays nonnegative and paid sales remain in orders, tenders, receipts and reports. Idempotency prevents a second decrement. `PosRequest` restores signed JSON from the raw request so website form middleware cannot turn blank variants into null and break valid signatures.
+
+Zero-opening automatic cash sessions belong to the actor and device. They coexist with another till's session without taking its register pointer. Opening cash is a reminder in both clients. A local Disconnect flag prevents all POS API requests while retaining credentials; Connect runs the manual sync path. No background financial upload occurs.
+
+Product media downloads in four bounded workers without bearer credentials. A private raster-only disk cache is exposed through `pos-image:`; the sandboxed renderer never gets filesystem or network access. Missing media does not undo financial synchronization.

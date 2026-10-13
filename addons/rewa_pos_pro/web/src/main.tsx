@@ -157,12 +157,6 @@ function Application() {
         localStorage.setItem("rewa-pos-theme", dark ? "dark" : "light");
     }, [dark]);
     useEffect(() => {
-        if (notice) {
-            const timer = setTimeout(() => setNotice(""), 6000);
-            return () => clearTimeout(timer);
-        }
-    }, [notice]);
-    useEffect(() => {
         const id = sessionStorage.getItem(printKey);
         if (id && scope) {
             setReceiptId(Number(id));
@@ -358,22 +352,11 @@ function Application() {
                         screen; saved held carts remain in your store.
                     </div>
                 )}
-                {(error || notice || bootQuery.error) && (
-                    <div
-                        className={`banner ${error || bootQuery.error ? "danger" : "green"}`}
-                        role="status"
-                    >
-                        {error || bootQuery.error?.message || notice}
-                        <button
-                            aria-label="Dismiss message"
-                            onClick={() => {
-                                setError("");
-                                setNotice("");
-                            }}
-                        >
-                            <X size={16} />
-                        </button>
-                    </div>
+                {(error || (notice && !receipt)) && (
+                    <Modal closeLabel="Dismiss message" title={error ? "Please check this" : "Done"} onClose={() => { setError(""); setNotice(""); }}>
+                        <p role="status">{error || notice}</p>
+                        <button className="primary" onClick={() => { setError(""); setNotice(""); }}>OK, I understand</button>
+                    </Modal>
                 )}
                 {printPending && !receipt && (
                     <div className="print-reminder">
@@ -1096,7 +1079,7 @@ function Checkout({
                                     {openShift.id} open
                                 </>
                             ) : (
-                                "Open a shift in Register to sell"
+                                "Reminder: record opening cash in Register when convenient"
                             )}
                         </span>
                     </div>
@@ -1306,8 +1289,7 @@ function Checkout({
                             busy ||
                             !online ||
                             (!intent &&
-                                (!openShift ||
-                                    !lines.length ||
+                                (!lines.length ||
                                     !!total.error ||
                                     !can("sale:write")))
                         }
@@ -1424,20 +1406,12 @@ function Checkout({
                             checkout(intent);
                             return;
                         }
-                        if (!openShift) {
-                            onError(
-                                new Error(
-                                    "Open your register shift before checkout.",
-                                ),
-                            );
-                            return;
-                        }
                         checkout({
                             key: uuid(),
                             payload: {
                                 client_sale_id: uuid(),
                                 register_id: registerId,
-                                shift_id: openShift.id,
+                                ...(openShift ? { shift_id: openShift.id } : {}),
                                 currency: boot.currency,
                                 grand_total_minor: total.total_minor,
                                 lines: saleLines(lines, boot.max_discount_bps),

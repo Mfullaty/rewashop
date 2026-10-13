@@ -1,5 +1,5 @@
 'use strict';
-const {randomUUID} = require('node:crypto');
+const {randomUUID, createHash} = require('node:crypto');
 const {integer, calculate, bound} = require('./money.cjs');
 const {verifyPolicy, canonical} = require('./policy.cjs');
 const success = ack => ack?.durable && ['accepted', 'duplicate'].includes(ack.status);
@@ -24,15 +24,18 @@ class Client {
   require(ability, financial = false) {
     const b = this.boot();
     if (!b.abilities.includes('pos:' + ability)) throw Error('Your cashier account cannot perform this action.');
-    if (financial && (this.s.meta('blocked') || this.s.meta('transfer_locked') || this.s.reviews().length || this.unresolved().length)) throw Error('Resolve the connection, transfer or pending review before recording more money.');
+    if(financial && this.s.meta('transfer_locked')) throw Error('Your data was moved to another computer. Continue selling on that computer.');
+    if(financial && this.s.meta('restore_pending')) throw Error('Your backup is restored. Connect once and ask the shop owner to approve recovery of this computer.');
+    if(financial && this.s.meta('blocked')) throw Error(this.s.meta('blocked'));
     return b;
   }
   unresolved() { return this.s.db.prepare('SELECT * FROM requests WHERE response IS NULL ORDER BY rowid').all(); }
   async api(path, method = 'GET', body, key) {
+    if (this.s.meta('manual_offline')) { const e = Error('This computer is disconnected. Your downloaded products and saved sales are still available. Click Connect, then Sync when you are ready.'); e.code = 'MANUAL_OFFLINE'; throw e; }
     const origin = this.s.meta('origin'); if (!origin) throw Error('RewaShop address is missing.');
     const credential = this.s.meta('credential');
     try { return await this.transport(origin + '/api/pos/v1/' + path, {method, body, key, token: credential ? await this.credentials.decrypt(credential) : null}); }
-    catch (e) { if ([401, 403].includes(e.status)) this.s.set('blocked', e.message); throw e; }
+    catch (e) { if ([401, 403].includes(e.status) && ['DEVICE_UNAUTHENTICATED','DEVICE_REVOKED','USER_BLOCKED','SELLER_POS_DISABLED'].includes(e.code)) this.s.set('blocked', e.message); throw e; }
   }
   async pairStart(origin, name) {
     const u = new URL(origin); if (u.protocol !== 'https:' || u.username || u.password || u.search || u.hash || u.pathname !== '/') throw Error('Enter the HTTPS site address, such as https://rewashop.com.');
@@ -66,6 +69,7 @@ class Client {
     if (old?.offline_policy_key && canonical(old.offline_policy_key) !== canonical(b.offline_policy_key)) throw Error('Server signing key changed. RewaShop must verify the new key before reconnecting.');
     if (Number(b.last_sequence) > this.s.meta('sequence', 0)) throw Error('This backup is older than server history. Restore the latest backup.');
     this.s.transaction(() => {
+      if (b.server_time) this.s.set('server_offset', Date.parse(b.server_time) - Date.now());
       this.s.set('boot', b); this.s.set('last_contact', Math.max(this.s.meta('last_contact', 0), Date.now())); this.s.set('blocked', null);
       if (!old) this.s.set('sequence', Number(b.last_sequence));
       const shift = this.s.meta('shift');
@@ -134,6 +138,7 @@ class Client {
     for (const row of this.unresolved()) {
       try { await this.replayRequest(row); }
       catch (e) {
+        if(row.path==='inventory/allocations/reconcile' && e.status===403 && ['PERMISSION_DENIED','OFFLINE_DISABLED'].includes(e.code)) continue;
         const saved = this.s.db.prepare('SELECT response FROM requests WHERE id=?').get(row.id);
         if (!saved?.response || !JSON.parse(saved.response).rejected) throw e;
         // Preserve the definitive rejection as evidence, and continue recovering
@@ -145,20 +150,28 @@ class Client {
       const query = pending.slice(offset, offset + 100).map(e => 'event_ids[]=' + encodeURIComponent(e.event_id)).join('&');
       const status = await this.api('sync/status?' + query); for (const ack of status.results) this.applyAck(ack);
     }
-    const unresolvedReviews = this.s.reviews().filter(r => !this.s.events(true).some(e => this.s.get('correction', e.event_id)?.original_event_id === r.event_id));
-    if (unresolvedReviews.length) throw Error('A recorded operation needs supervisor review. Saved money and stock evidence remain on this computer.');
+    this.repairShiftConflicts();
+    // Older rejected records remain visible, but must not lock an unrelated sale.
     for (const e of this.s.events(true)) {
       const {ack, ...event} = e;
       const response = await this.api('sync/push', 'POST', {schema_version: 1, device_id: this.boot().device_id, events: [event]});
       const result = response.results[0];
       if (!result || result.event_id !== event.event_id) throw Error('Invalid sync acknowledgment. Retry sync.');
       this.applyAck(result);
-      if (!success(result)) throw Error(result.message || result.error_code || 'Sync paused for review.');
+      if (!result.durable) break;
     }
     await this.refreshBootstrap();
+    if (this.boot().offline_catalog_sales) this.s.set('cursor_ready', false);
+    if(this.boot().offline_catalog_sales && this.boot().device?.offline_allowed && this.boot().abilities.includes('pos:inventory:write') && !this.unresolved().some(r=>r.path==='inventory/allocations/reconcile') && !this.s.events(true).some(e=>e.type==='sale.completed' && e.payload.inventory_mode!=='catalog') && !this.s.reviews().some(e=>e.type==='sale.completed' && e.payload.inventory_mode!=='catalog')) {
+      const old=this.s.list('allocation').filter(a=>a.status==='open');
+      for(let i=0;i<old.length;i+=200) {
+        try { await this.mutation('inventory/allocations/reconcile',{checkpoint_sequence:this.s.meta('sequence',0),pending_events:0,allocations:old.slice(i,i+200).map(a=>({allocation_id:a.allocation_id,consumed_quantity:a.consumed}))}); }
+        catch(e) { if(e.status===403 && ['PERMISSION_DENIED','OFFLINE_DISABLED'].includes(e.code)) break; throw e; }
+      }
+    }
     await this.refreshCatalog();
     await this.refreshAllocations();
-    this.s.set('restore_pending', false); this.s.set('last_sync', Date.now()); return this.state();
+    this.s.set('restore_pending', false); this.s.set('last_sync', Date.now()); return {...this.state(), syncSummary: {uploaded: this.s.events().filter(e => success(e.ack)).length, waiting: this.s.events(true).length + this.s.reviews().length + this.unresolved().length}};
   }
   async refreshCatalog() {
     if (!this.s.meta('cursor_ready')) {
@@ -177,6 +190,7 @@ class Client {
         this.s.set('cursor', page.cursor);
       });
     } while (page.has_more);
+    this.s.set('catalog_applied_sales',this.s.list('sale').filter(s=>s.sync_status==='accepted').map(s=>s.client_sale_id));
   }
   async refreshAllocations() {
     if (!this.boot().abilities.includes('pos:inventory:read')) return;
@@ -199,11 +213,31 @@ class Client {
   }
   offlineCheck() {
     const b = this.require('sale:write', true);
-    if (this.s.meta('restore_pending') || !b.device?.offline_allowed) throw Error('This computer is not approved for offline sales.');
-    if (!Number.isFinite(Date.parse(this.s.meta('credential_expiry'))) || Date.now() > Date.parse(this.s.meta('credential_expiry'))) throw Error('Device permission expired. Reconnect with RewaShop.');
+    if (this.s.meta('restore_pending') || !b.device?.offline_allowed) throw Error('Connect this computer once to download your shop products. Your shop owner can approve it in the website POS settings.');
+    if (!this.boot().offline_catalog_sales && (!Number.isFinite(Date.parse(this.s.meta('credential_expiry'))) || Date.now() > Date.parse(this.s.meta('credential_expiry')))) throw Error('Connect this computer again to refresh your shop access.');
     if (Date.now() < Math.max(this.s.meta('last_clock', 0), this.s.meta('last_contact', 0)) - 300000) throw Error('Computer clock moved backwards. Correct the clock and reconnect.');
     return b;
   }
+  serverNow() { return Date.now() + this.s.meta('server_offset', 0); }
+  localStockUse() {
+    const applied=new Set(this.s.meta('catalog_applied_sales',[])),used=new Map();
+    for(const sale of this.s.list('sale')) {
+      if(sale.mode!=='offline'||applied.has(sale.client_sale_id))continue;
+      for(const line of sale.lines) if(line.catalog_policy)used.set(line.stock_id,(used.get(line.stock_id)||0)+line.quantity);
+    }
+    return used;
+  }
+  available(stockId, used = this.localStockUse()) {
+    const item=this.s.get('catalog',stockId);return item ? Math.max(0,Number(item.available_quantity)-(used.get(stockId)||0)) : 0;
+  }
+  ensureShift() {
+    if (this.s.meta('shift')?.status === 'open') return this.s.meta('shift');
+    const b = this.boot(), p = {client_shift_id: randomUUID(), register_id: b.registers[0].id, opening_minor: 0, automatic: true, occurred_at: new Date(this.serverNow()).toISOString()};
+    this.s.transaction(() => { this.s.enqueue('shift.opened', p); this.s.set('shift', {...p, expected_minor: 0, status: 'open'}); });
+    return this.s.meta('shift');
+  }
+  disconnect() { this.s.set('manual_offline', true); return this.state(); }
+  async connect() { this.s.set('manual_offline', false); return this.sync(); }
   allocation(stockId, quantity) {
     const b = this.boot();
     return this.s.list('allocation').find(a => {
@@ -213,14 +247,21 @@ class Client {
   }
   quote(cart, mode = 'offline') {
     const b = this.boot(); if (!Array.isArray(cart) || !cart.length || cart.length > 200 || new Set(cart.map(l => l.stock_id)).size !== cart.length) throw Error('Add between 1 and 200 distinct products.');
+    const used = this.localStockUse();
     const lines = cart.map(input => {
       integer(input.stock_id, 1); integer(input.quantity, 1, 10000); const allocation = mode === 'offline' ? this.allocation(input.stock_id, input.quantity) : null;
-      const item = mode === 'offline' ? allocation?.price_snapshot : this.s.get('catalog', input.stock_id);
+      const catalog = this.s.get('catalog', input.stock_id), cached = mode === 'offline' && b.offline_catalog_sales;
+      const item = cached && catalog?.offline_policy ? {...catalog.offline_policy.policy.price_snapshot,offline_policy:catalog.offline_policy} : cached ? catalog : mode === 'offline' ? allocation?.price_snapshot : catalog;
+      if (cached) {
+        if (!item?.offline_policy) throw Error('Click Connect and Sync once to download this product for offline sales.');
+        verifyPolicy(item.offline_policy, b, this.serverNow());
+        if (input.quantity > this.available(input.stock_id, used)) throw Error('Only ' + this.available(input.stock_id, used) + ' of this product remain in the downloaded stock list. Reduce the quantity or sync the latest stock.');
+      }
       if (!item) throw Error('Product is unavailable, offline stock is insufficient, or its permission expired.');
       if (input.discount_minor && !b.abilities.includes('pos:discount:write')) throw Error('Discount permission is required.');
       if (input.override_minor !== undefined && (mode !== 'online' || !b.abilities.includes('pos:price:override') || String(input.override_reason ?? '').length < 3)) throw Error('Price changes need an online supervisor and a reason.');
       const price = calculate(item, input.quantity, input.discount_minor || 0, Math.min(b.max_discount_bps, item.max_discount_bps ?? b.max_discount_bps), input.override_minor);
-      return {...price, stock_id: input.stock_id, quantity: input.quantity, snapshot: item, ...(allocation ? {allocation_id: allocation.allocation_id, policy_signature: allocation.signed_policy.signature} : {}), ...(input.override_minor !== undefined ? {override_minor: input.override_minor, override_reason: input.override_reason} : {})};
+      return {...price, stock_id: input.stock_id, quantity: input.quantity, snapshot: item, ...(cached ? {catalog_policy: item.offline_policy} : allocation ? {allocation_id: allocation.allocation_id, policy_signature: allocation.signed_policy.signature} : {}), ...(input.override_minor !== undefined ? {override_minor: input.override_minor, override_reason: input.override_reason} : {})};
     });
     const sum = key => bound(lines.reduce((n, l) => n + BigInt(l[key]), 0n));
     return {lines, subtotal_minor: sum('subtotal_minor'), discount_minor: sum('discount_minor'), tax_minor: sum('tax_minor'), total_minor: sum('total_minor')};
@@ -228,7 +269,7 @@ class Client {
   openShift(opening) {
     const b = this.require('shift:write', true); integer(opening);
     if (this.s.meta('shift')?.status === 'open' || b.active_shift && !this.s.meta('shift')) throw Error('A shift is already open. Sync or close it first.');
-    const p = {client_shift_id: randomUUID(), register_id: b.registers[0].id, opening_minor: opening, occurred_at: new Date().toISOString()};
+    const p = {client_shift_id: randomUUID(), register_id: b.registers[0].id, opening_minor: opening, occurred_at: new Date(this.serverNow()).toISOString()};
     this.s.transaction(() => { this.s.enqueue('shift.opened', p); this.s.set('shift', {...p, expected_minor: opening, status: 'open'}); }); return this.state();
   }
   shift() { const shift = this.s.meta('shift'); if (!shift || shift.status !== 'open') throw Error('Open your till first.'); return shift; }
@@ -240,13 +281,14 @@ class Client {
   closeShift(counted, reason) {
     this.require('shift:write', true); integer(counted); const shift = this.shift();
     if (counted !== shift.expected_minor && String(reason ?? '').length < 3) throw Error('Explain why counted cash differs from expected cash.');
-    this.s.transaction(() => { this.s.enqueue('shift.closed', {client_shift_id: shift.client_shift_id, counted_minor: counted, reason: reason || null, occurred_at: new Date().toISOString()}); this.s.set('shift', {...shift, status: 'closed', counted_minor: counted, reason}); }); return this.state();
+    this.s.transaction(() => { this.s.enqueue('shift.closed', {client_shift_id: shift.client_shift_id, counted_minor: counted, reason: reason || null, occurred_at: new Date(this.serverNow()).toISOString()}); this.s.set('shift', {...shift, status: 'closed', counted_minor: counted, reason}); }); return this.state();
   }
   async checkout(input) {
-    const mode = input.mode, b = mode === 'offline' ? this.offlineCheck() : this.require('sale:write', true), shift = this.shift();
+    const mode = input.mode, b = mode === 'offline' ? this.offlineCheck() : this.require('sale:write', true), shift = this.ensureShift();
     if (!['offline', 'online'].includes(mode)) throw Error('Choose offline or online checkout.');
     const prior = this.s.get('sale', input.client_sale_id); if (prior) { if (prior.local_request !== canonical(input)) throw Error('Sale ID already belongs to another request.'); return prior; }
     if (!/^[a-f0-9-]{36}$/i.test(input.client_sale_id)) throw Error('Invalid sale identity.');
+    if(this.s.db.prepare('SELECT id FROM requests WHERE id=? AND response IS NULL').get(input.client_sale_id)) throw Error('This payment is waiting for confirmation from your online store. Connect and sync to check it before repeating this same sale. Other cash sales can continue.');
     const q = this.quote(input.cart, mode), id = input.client_sale_id;
     if (q.total_minor < 1) throw Error('Sale total must be positive.');
     let tenders = input.tenders;
@@ -262,19 +304,24 @@ class Client {
     if (applied !== q.total_minor) throw Error('Payments must equal the total.');
     const wireLines = q.lines.map(({snapshot, subtotal_minor, ...l}) => l);
     const payload = {client_sale_id: id, register_id: b.registers[0].id, currency: b.currency, lines: wireLines, tenders, grand_total_minor: q.total_minor, ...(input.customer?.name ? {customer: input.customer} : {})};
-    const receipt = {...q, local_request: canonical(input), client_sale_id: id, number: 'LOCAL-' + id, currency: b.currency, store: b.branding, register: b.registers[0].code, cashier: b.cashier_name || 'Cashier', occurred_at: new Date().toISOString(), customer: input.customer?.name ? input.customer : {name: 'Walk-in customer'}, tenders, mode, sync_status: 'pending'};
+    const receipt = {...q, local_request: canonical(input), client_sale_id: id, number: 'LOCAL-' + id, currency: b.currency, store: b.branding, register: b.registers[0].code, cashier: b.cashier_name || 'Cashier', occurred_at: new Date(this.serverNow()).toISOString(), customer: input.customer?.name ? input.customer : {name: 'Walk-in customer'}, tenders, mode, sync_status: 'pending'};
     if (mode === 'online') {
       if (this.s.events(true).length) await this.sync();
       const active = this.shift(); if (!active.server_id) throw Error('Sync the open shift before online checkout.');
       payload.shift_id = active.server_id;
       await this.mutation('sales', payload, id, {receipt, client_shift_id: active.client_shift_id}); return this.s.get('sale', id);
     }
-    const policies = q.lines.map(l => this.s.get('allocation', l.allocation_id).signed_policy.policy);
-    const spent = this.s.meta('spent_minor', 0);
-    if (policies.some(p => q.total_minor > p.max_offline_sale_minor || spent + q.total_minor > p.max_offline_budget_minor)) throw Error('Offline money limit reached. Sync and reconcile stock first.');
+    const cached = !!b.offline_catalog_sales, spent = this.s.meta('spent_minor', 0);
+    if (!cached) {
+      const policies = q.lines.map(l => this.s.get('allocation', l.allocation_id).signed_policy.policy);
+      if (policies.some(p => q.total_minor > p.max_offline_sale_minor || spent + q.total_minor > p.max_offline_budget_minor)) throw Error('Sync your saved sales and refresh your offline stock before recording this sale.');
+    } else {
+      payload.inventory_mode = 'catalog';
+      receipt.occurred_at = new Date(Math.max(this.serverNow(), ...q.lines.map(l => Date.parse(l.catalog_policy.policy.issued_at)))).toISOString();
+    }
     payload.client_shift_id = shift.client_shift_id; payload.occurred_at = receipt.occurred_at;
     this.s.transaction(() => {
-      for (const l of q.lines) { const a = this.s.get('allocation', l.allocation_id); a.consumed += l.quantity; this.s.put('allocation', a.allocation_id, a); }
+      if (!cached) for (const l of q.lines) { const a = this.s.get('allocation', l.allocation_id); a.consumed += l.quantity; this.s.put('allocation', a.allocation_id, a); }
       this.s.enqueue('sale.completed', payload); this.s.put('sale', id, receipt); this.s.set('spent_minor', spent + q.total_minor);
       shift.expected_minor += q.total_minor; this.s.set('shift', shift); this.s.set('last_clock', Date.now()); this.s.set('cart', []);
     }); return receipt;
@@ -324,6 +371,25 @@ class Client {
     integer(id, 1); const map = {void: ['void:write', `sales/${id}/void`], tender: ['payment:verify', `tenders/${id}/verify`], refundVerify: ['payment:verify', `refunds/${id}/verify`]};
     if (!map[kind]) throw Error('Unsupported action.'); this.require(map[kind][0], true); return this.mutation(map[kind][1], data);
   }
+  repairShiftConflicts() {
+    if(!this.boot().offline_catalog_sales)return;
+    const queued=new Set(this.s.events(true).map(e=>this.s.get('correction',e.event_id)?.original_event_id));
+    const shifts=new Set();
+    this.s.transaction(()=>{
+      for(const original of this.s.reviews()) {
+        if(original.type!=='shift.opened'||original.ack.error_code!=='SHIFT_ALREADY_OPEN')continue;
+        shifts.add(original.payload.client_shift_id);
+        if(queued.has(original.event_id)||this.s.list('correction').some(c=>c.original_event_id===original.event_id))continue;
+        const e=this.s.enqueue(original.type,{...original.payload,automatic:true});
+        this.s.put('correction',e.event_id,{original_event_id:original.event_id});
+      }
+      for(const original of this.s.reviews()) {
+        if(queued.has(original.event_id)||original.ack.error_code!=='SHIFT_UNAVAILABLE'||!shifts.has(original.payload.client_shift_id))continue;
+        const e=this.s.enqueue(original.type,original.payload);
+        this.s.put('correction',e.event_id,{original_event_id:original.event_id});
+      }
+    });
+  }
   retryReview(id) {
     this.require('device:manage');
     const original = this.s.reviews().find(e => e.event_id === id);
@@ -336,8 +402,8 @@ class Client {
   }
   async report(from, to) { this.require('report:read'); const data = await this.api('reports/summary?' + new URLSearchParams({...(from ? {from} : {}), ...(to ? {to} : {})})); this.s.set('report', data); return data; }
   state() {
-    const boot = this.s.meta('boot');
-    return {paired: !!this.s.meta('credential'), origin: this.s.meta('origin', 'https://rewashop.com'), boot, shift: this.s.meta('shift'), catalog: this.s.list('catalog'), allocations: this.s.list('allocation'), sales: this.s.list('sale').reverse(), returns: this.s.list('return'), events: this.s.events().map(e => ({...e, review_resolved: !!this.s.get('resolved', e.event_id)})), pendingRequests: this.unresolved().map(r => ({id: r.id, path: r.path})), requestFailures: this.s.db.prepare('SELECT id,path,response FROM requests WHERE response IS NOT NULL').all().map(r => ({id:r.id,path:r.path,...JSON.parse(r.response)})).filter(r => r.rejected), blocked: this.s.meta('blocked'), transferLocked: this.s.meta('transfer_locked'), cart: this.s.meta('cart', []), held: this.s.list('held'), lastSync: this.s.meta('last_sync'), remoteSales: this.s.meta('remote_sales'), report: this.s.meta('report'), pairing: this.s.meta('pairing') ? {pairing_id: this.s.meta('pairing').pairing_id, expires_at: this.s.meta('pairing').expires_at, recovery_device_id: boot?.device_id} : null};
+    const boot = this.s.meta('boot'), used = this.localStockUse();
+    return {manualOffline: !!this.s.meta('manual_offline'), paired: !!this.s.meta('credential'), origin: this.s.meta('origin', 'https://rewashop.com'), boot, shift: this.s.meta('shift'), catalog: this.s.list('catalog').map(item => ({...item, local_quantity: this.available(item.stock_id, used), image_src: item.image_url && this.s.get('photo', createHash('sha256').update(item.image_url).digest('hex')) ? 'pos-image://cache/' + createHash('sha256').update(item.image_url).digest('hex') : null})), allocations: this.s.list('allocation'), sales: this.s.list('sale').reverse(), returns: this.s.list('return'), events: this.s.events().map(e => ({...e, review_resolved: !!this.s.get('resolved', e.event_id)})), pendingRequests: this.unresolved().map(r => ({id: r.id, path: r.path})), requestFailures: this.s.db.prepare('SELECT id,path,response FROM requests WHERE response IS NOT NULL').all().map(r => ({id:r.id,path:r.path,...JSON.parse(r.response)})).filter(r => r.rejected), blocked: this.s.meta('blocked'), transferLocked: this.s.meta('transfer_locked'), cart: this.s.meta('cart', []), held: this.s.list('held'), lastSync: this.s.meta('last_sync'), remoteSales: this.s.meta('remote_sales'), report: this.s.meta('report'), pairing: this.s.meta('pairing') ? {pairing_id: this.s.meta('pairing').pairing_id, expires_at: this.s.meta('pairing').expires_at, recovery_device_id: boot?.device_id} : null};
   }
 }
 module.exports = {Client, success};

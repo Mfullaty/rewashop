@@ -33,7 +33,7 @@ class Store {
       for (const r of data.records) { JSON.parse(r.value); this.db.prepare('INSERT INTO records VALUES(?,?,?)').run(r.kind, r.id, r.value); }
       for (const e of data.events) { JSON.parse(e.payload); this.db.prepare('INSERT INTO events VALUES(?,?,?,?,?)').run(e.sequence, e.event_id, e.type, e.payload, e.ack); }
       for (const r of data.requests) this.db.prepare('INSERT INTO requests VALUES(?,?,?,?)').run(r.id, r.path, r.payload, r.response);
-      this.remove('meta', 'credential'); this.remove('meta', 'pairing'); this.set('restore_pending', true); this.set('blocked', 'Restore requires internet and supervisor device recovery approval.');
+      this.remove('meta', 'credential'); this.remove('meta', 'pairing'); this.set('manual_offline', false); this.set('restore_pending', true); this.set('blocked', 'Restore requires internet and supervisor device recovery approval.');
     });
   }
   close() { this.db.close(); }

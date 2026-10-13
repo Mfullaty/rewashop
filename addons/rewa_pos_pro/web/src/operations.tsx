@@ -1136,6 +1136,8 @@ function Reports(props: Props) {
                             </div>
                             <div className="panel">
                                 <h3>Needs attention</h3>
+                                <div className="attention-row"><span>Offline stock differences (units)</span><strong>{report.data.stock_difference_units || 0}</strong></div>
+                                {!!report.data.stock_difference_units && <p>Paid offline sales are saved. Count the affected stock and update its quantity in your store dashboard.</p>}
                                 <div className="attention-row">
                                     <span>Pending sale payments</span>
                                     <strong>
@@ -1598,8 +1600,8 @@ function Settings(props: Props) {
                             {boot.registers.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
                         </select></Field>
                         <Field label="Cashier user ID"><input name="cashier_id" type="number" min="1" defaultValue={boot.cashier_id} required /></Field>
-                        <label className="check-row"><input name="offline_allowed" type="checkbox" defaultChecked /> Allow offline stock and cash sales</label>
-                        <Field label="Maximum reserved units"><input name="max_reserved_units" type="number" min="1" max="10000" defaultValue="1000" required /></Field>
+                        <label className="check-row"><input name="offline_allowed" type="checkbox" defaultChecked /> Allow downloaded products and offline cash sales</label>
+                        <Field label="Maximum reserved units (older desktop versions)"><input name="max_reserved_units" type="number" min="1" max="10000" defaultValue="1000" required /></Field>
                         <Field label="Maximum offline sale amount"><input name="sale_limit" defaultValue="1000000.00" required pattern="[0-9]+([.][0-9]{1,2})?" /></Field>
                         <Field label="Total offline money budget"><input name="budget_limit" defaultValue="5000000.00" required pattern="[0-9]+([.][0-9]{1,2})?" /></Field>
                         <Field label="Existing device ID (recovery or computer transfer only)"><input name="existing_device_id" /></Field>

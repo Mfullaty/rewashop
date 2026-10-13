@@ -10,6 +10,9 @@ test.beforeEach(() => {
     );
 });
 async function login(page: Page, id = 1) {
+    await page.addLocatorHandler(page.getByRole("dialog", {name:"Done", exact:true}), async () => {
+        await page.getByRole("dialog", {name:"Done", exact:true}).getByRole("button", {name:"OK, I understand"}).click();
+    });
     await page.goto(`/__pos_test/login/${id}`);
     await expect(
         page.getByRole("heading", { name: "Checkout", exact: true }),
@@ -123,6 +126,7 @@ test("lost committed response survives reload and retries the same sale without 
     await page
         .getByRole("button", { name: "Record sale", exact: true })
         .click();
+    await page.getByRole("dialog",{name:"Please check this"}).getByRole("button",{name:"OK, I understand"}).click();
     await expect(
         page.getByRole("button", { name: "Retry saved checkout" }),
     ).toBeVisible();
@@ -282,6 +286,7 @@ test("browser print failure never submits or cancels another sale", async ({
     await expect(
         page.getByText("Printing could not start.", { exact: false }),
     ).toBeVisible();
+    await page.getByRole("dialog",{name:"Please check this"}).getByRole("button",{name:"OK, I understand"}).click();
     const reprint = page.waitForResponse(
         (response) =>
             response.url().includes("/reprint") &&
@@ -344,6 +349,7 @@ test("owner approves a desktop pairing through store settings", async ({ page })
     expect(start.status()).toBe(201);
     const pairing = await start.json();
     await page.getByRole('button', {name: 'Settings', exact: true}).click();
+    await page.removeLocatorHandler(page.getByRole("dialog",{name:"Done",exact:true}));
     await page.getByLabel('Connection number from desktop').fill(pairing.pairing_id);
     await page.getByRole('button', {name: 'Approve computer', exact: true}).click();
     await expect(page.getByText('Computer approved. Return to the desktop app and confirm connection.')).toBeVisible();
@@ -353,4 +359,18 @@ test("owner approves a desktop pairing through store settings", async ({ page })
     expect(claimed.status).toBe('paired');
     const boot = await page.request.get('/api/pos/v1/bootstrap', {headers: {Authorization: `Bearer ${claimed.token}`}});
     expect((await boot.json()).seller_id).toBe(2);
+});
+
+test("cashier can pay without opening a shift and success messages use dialogs", async ({page}) => {
+    await login(page);
+    await page.removeLocatorHandler(page.getByRole("dialog",{name:"Done",exact:true}));
+    await scan(page,"00101");
+    await expect(page.getByRole("button",{name:"Take payment"})).toBeEnabled();
+    await page.getByRole("button",{name:"Take payment"}).click();
+    const posted=page.waitForResponse(response=>response.url().includes("/pos/backend/sales")&&response.request().method()==="POST");
+    await page.getByRole("button",{name:"Record sale",exact:true}).click();
+    expect((await posted).status()).toBe(201);
+    await expect(page.getByRole("heading",{name:"Sale recorded",exact:true})).toBeVisible();
+    await page.getByRole("button",{name:"Mark printed"}).click();
+    await expect(page.getByRole("dialog",{name:"Done",exact:true})).toBeVisible();
 });

@@ -21,15 +21,16 @@ final class Schemas
     {
         return self::base() + [
             'client_sale_id' => 'required|uuid', 'register_id' => 'required|integer|min:1',
-            'shift_id' => $offline ? 'prohibited' : 'required|integer|min:1',
+            'shift_id' => $offline ? 'prohibited' : 'sometimes|integer|min:1',
             'client_shift_id' => $offline ? 'required|uuid' : 'prohibited',
+            'inventory_mode' => $offline ? 'sometimes|in:catalog,reserved' : 'prohibited',
             'currency' => 'required|string|size:3', 'occurred_at' => $offline ? 'required|date' : 'sometimes|date',
             'grand_total_minor' => ['sometimes', 'integer', 'min:1', 'max:'.config('pos.max_amount_minor')],
             'customer' => 'sometimes|array:name,email,phone', 'customer.name' => 'required_with:customer|string|max:150',
             'customer.email' => 'nullable|email|max:200', 'customer.phone' => 'nullable|string|max:30',
             'customer_id' => 'prohibited',
             'lines' => 'required|array|min:1|max:'.config('pos.max_lines'),
-            'lines.*' => 'required|array:stock_id,quantity,discount_minor,override_minor,override_reason,unit_price_minor,tax_minor,total_minor,allocation_id,policy_signature',
+            'lines.*' => 'required|array:stock_id,quantity,discount_minor,override_minor,override_reason,unit_price_minor,tax_minor,total_minor,allocation_id,policy_signature,catalog_policy',
             'lines.*.stock_id' => 'required|integer|min:1|distinct',
             'lines.*.quantity' => 'required|integer|min:1|max:'.config('pos.max_quantity'),
             'lines.*.discount_minor' => ['sometimes', 'integer', 'min:0', 'max:'.config('pos.max_amount_minor')],
@@ -38,8 +39,9 @@ final class Schemas
             'lines.*.unit_price_minor' => [$offline ? 'required' : 'sometimes', 'integer', 'min:0', 'max:'.config('pos.max_amount_minor')],
             'lines.*.tax_minor' => [$offline ? 'required' : 'sometimes', 'integer', 'min:0', 'max:'.config('pos.max_amount_minor')],
             'lines.*.total_minor' => ['sometimes', 'integer', 'min:0', 'max:'.config('pos.max_amount_minor')],
-            'lines.*.allocation_id' => $offline ? 'required|uuid' : 'prohibited',
-            'lines.*.policy_signature' => $offline ? 'required|string|size:88' : 'prohibited',
+            'lines.*.allocation_id' => $offline ? 'required_unless:inventory_mode,catalog|uuid' : 'prohibited',
+            'lines.*.policy_signature' => $offline ? 'required_unless:inventory_mode,catalog|string|size:88' : 'prohibited',
+            'lines.*.catalog_policy' => $offline ? 'required_if:inventory_mode,catalog|array' : 'prohibited',
             'tenders' => 'required|array|min:1|max:10',
             'tenders.*' => 'required|array:method,currency,amount_minor,received_minor,change_minor,reference',
             'tenders.*.method' => ['required', Rule::in(['cash', 'external_terminal', 'bank_transfer'])],
@@ -53,7 +55,7 @@ final class Schemas
     public static function shiftOpen(): array
     {
         return self::base() + ['client_shift_id' => 'required|uuid', 'register_id' => 'required|integer|min:1',
-            'opening_minor' => self::minor(), 'occurred_at' => 'sometimes|date'];
+            'automatic' => 'sometimes|boolean', 'opening_minor' => self::minor(), 'occurred_at' => 'sometimes|date'];
     }
 
     public static function shiftClose(): array

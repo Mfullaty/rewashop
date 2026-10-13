@@ -10085,7 +10085,6 @@
         "required": [
           "client_sale_id",
           "register_id",
-          "shift_id",
           "currency",
           "lines",
           "tenders"
@@ -10277,6 +10276,9 @@
             "type": "integer",
             "format": "int64",
             "minimum": 1
+          },
+          "automatic": {
+            "type": "boolean"
           },
           "opening_minor": {
             "type": "integer",
@@ -10920,6 +10922,50 @@
           },
           "tax_inclusive": {
             "type": "boolean"
+          },
+          "receipt_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 150
+          },
+          "receipt_logo_url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2048
+          },
+          "receipt_address": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 500
+          },
+          "receipt_phone": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 50
+          },
+          "receipt_email": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "email",
+            "maxLength": 200
+          },
+          "receipt_tax_details": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 250
+          },
+          "sellers_enabled": {
+            "type": "boolean"
           }
         },
         "additionalProperties": false
@@ -10980,6 +11026,13 @@
           "client_shift_id": {
             "type": "string",
             "format": "uuid"
+          },
+          "inventory_mode": {
+            "type": "string",
+            "enum": [
+              "catalog",
+              "reserved"
+            ]
           },
           "currency": {
             "type": "string",
@@ -11083,6 +11136,10 @@
                   "type": "string",
                   "minLength": 88,
                   "maxLength": 88
+                },
+                "catalog_policy": {
+                  "type": "object",
+                  "properties": {}
                 }
               },
               "additionalProperties": false,
@@ -11090,9 +11147,7 @@
                 "stock_id",
                 "quantity",
                 "unit_price_minor",
-                "tax_minor",
-                "allocation_id",
-                "policy_signature"
+                "tax_minor"
               ],
               "dependentRequired": {
                 "override_minor": [
@@ -11187,6 +11242,9 @@
             "type": "integer",
             "format": "int64",
             "minimum": 1
+          },
+          "automatic": {
+            "type": "boolean"
           },
           "opening_minor": {
             "type": "integer",

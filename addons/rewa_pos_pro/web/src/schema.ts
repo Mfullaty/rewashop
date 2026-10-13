@@ -3,7 +3,7 @@ const minor = z.number().int().min(0).max(1_000_000_000_000);
 export const onlineSaleSchema = z.strictObject({
     client_sale_id: z.uuid(),
     register_id: z.number().int().positive(),
-    shift_id: z.number().int().positive(),
+    shift_id: z.number().int().positive().optional(),
     currency: z.string().regex(/^[A-Z]{3}$/),
     grand_total_minor: minor.refine((value) => value > 0),
     customer: z

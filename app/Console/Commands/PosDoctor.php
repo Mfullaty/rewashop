@@ -16,10 +16,11 @@ class PosDoctor extends Command
     {
         $errors = [];
         foreach (['users', 'products', 'product_stocks', 'product_taxes', 'orders', 'order_details',
-            'pos_settings', 'pos_device_tokens', 'pos_sales', 'pos_stock_allocations', 'pos_sync_inbox'] as $table) {
+            'pos_settings', 'pos_device_tokens', 'pos_sales', 'pos_stock_shortfalls', 'pos_stock_allocations', 'pos_sync_inbox'] as $table) {
             if (!Schema::hasTable($table)) { $errors[] = 'Missing table: '.$table; }
         }
         foreach (['products' => ['added_by', 'user_id', 'pos', 'approved', 'published', 'barcode', 'wholesale_product', 'pos_excluded'],
+            'pos_shifts' => ['automatic'],
             'orders' => ['user_id', 'seller_id', 'shipping_type', 'order_from'],
             'product_stocks' => ['product_id', 'variant', 'qty', 'sku', 'price']] as $table => $columns) {
             if (Schema::hasTable($table)) {
@@ -45,7 +46,7 @@ class PosDoctor extends Command
         }
         foreach ($errors as $error) { $this->error($error); }
         $this->line('POS enabled: '.(config('pos.enabled') ? 'yes' : 'no'));
-        $this->line('Offline allocations enabled: '.(config('pos.offline_enabled') ? 'yes' : 'no'));
+        $this->line('Offline cash sales enabled: '.(config('pos.offline_enabled') ? 'yes' : 'no'));
         $this->line('Live addon, import and direct-SQL stock writers still require staging validation.');
         if (!$errors) { $this->info('Shared backend compatibility checks passed.'); }
         return $errors ? self::FAILURE : self::SUCCESS;

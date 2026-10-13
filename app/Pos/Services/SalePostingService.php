@@ -23,9 +23,10 @@ class SalePostingService
             $rules['shift_id'] = 'required|integer|min:1'; $rules['client_shift_id'] = 'sometimes|uuid';
         }
         $data = \Illuminate\Support\Facades\Validator::make($data, $rules)->validate();
+        $cached = $offline && ($data['inventory_mode'] ?? 'reserved') === 'catalog';
         $source = $context->device ? 'desktop' : 'web';
-        $identity = $data + ['source' => $source, 'inventory_mode' => $offline ? 'reserved' : 'online', 'device_id' => $context->device?->id];
-        return app(TransactionService::class)->once($context, $key, 'sale.post', $identity, function () use ($context, $data, $offline, $identity) {
+        $identity = $data + ['source' => $source, 'inventory_mode' => $cached ? 'catalog' : ($offline ? 'reserved' : 'online'), 'device_id' => $context->device?->id];
+        return app(TransactionService::class)->once($context, $key, 'sale.post', $identity, function () use ($context, $data, $offline, $cached, $identity) {
             $old = DB::table('pos_sales')->where('client_sale_id', $data['client_sale_id'])->first();
             if ($old) {
                 if ((int) $old->seller_id !== $context->sellerId || (int) $old->cashier_id !== (int) $context->actor->id ||
@@ -34,6 +35,7 @@ class SalePostingService
                 }
                 return $this->result($old->id) + ['duplicate' => true];
             }
+            if (!$offline && !isset($data['shift_id'])) { $data['shift_id'] = (int) app(ShiftService::class)->automatic($context, (int) $data['register_id'])->id; }
             $register = $context->register((int) $data['register_id']);
             $shift = app(ShiftService::class)->active($context, (int) $data['shift_id'], (int) $register->id);
             if ($data['currency'] !== $context->currency) {
@@ -51,7 +53,11 @@ class SalePostingService
             $lines = []; $subtotal = 0; $discount = 0; $tax = 0; $total = 0;
             foreach ($data['lines'] as $input) {
                 $stock = $stocks[$input['stock_id']];
-                if ($offline) {
+                $shortfall = 0;
+                if ($cached) {
+                    $snapshot = app(OfflineCatalogService::class)->snapshot($context, $input, $occurred->toIso8601String());
+                    $shortfall = app(OfflineCatalogService::class)->deduct($context, $stock, (int) $input['quantity'], $data['client_sale_id']);
+                } elseif ($offline) {
                     if (empty($input['allocation_id'])) {
                         throw new PosException('ALLOCATION_REQUIRED', 'Every offline sale line requires a device allocation.');
                     }
@@ -65,6 +71,7 @@ class SalePostingService
                     app(InventoryService::class)->online($context, (int) $stock->id, -$input['quantity'], 'sale', $data['client_sale_id']);
                 }
                 $line = app(PricingService::class)->line($context, $snapshot, $input, $offline);
+                $line['shortfall_quantity'] = $shortfall;
                 $line['allocation_id'] = $input['allocation_id'] ?? null;
                 $lines[] = $line;
                 $subtotal = Money::bound($subtotal + $line['subtotal_minor']);
@@ -82,7 +89,7 @@ class SalePostingService
                 throw new PosException('TOTAL_MISMATCH', 'The sale total does not match the authorized line totals.', 409);
             }
             $tenders = app(TenderService::class)->validate($data['tenders'], $total, $context->currency, $offline);
-            if ($offline) {
+            if ($offline && !$cached) {
                 $device = DB::table('pos_devices')->where('id', $context->device->id)->first();
                 if ($total > $device->max_offline_sale_minor || (int) $device->offline_spent_minor + $total > $device->max_offline_budget_minor) {
                     throw new PosException('OFFLINE_EXPOSURE_LIMIT', 'The offline sale or accumulated exposure limit was exceeded.', 409);
@@ -110,13 +117,14 @@ class SalePostingService
                 'order_id' => $orderId, 'seller_id' => $context->sellerId,
                 'location_id' => $register->location_id, 'register_id' => $register->id, 'shift_id' => $shift->id,
                 'cashier_id' => $context->actor->id, 'device_id' => $context->device?->id,
-                'source' => $context->device ? 'desktop' : 'web', 'inventory_mode' => $offline ? 'reserved' : 'online', 'status' => 'completed',
+                'source' => $context->device ? 'desktop' : 'web', 'inventory_mode' => $cached ? 'catalog' : ($offline ? 'reserved' : 'online'), 'status' => 'completed',
                 'payment_status' => $pending ? 'pending' : 'settled', 'currency' => $context->currency,
                 'subtotal_minor' => $subtotal, 'discount_minor' => $discount, 'tax_minor' => $tax,
                 'total_minor' => $total, 'refunded_minor' => 0, 'occurred_at' => $occurred,
                 'created_at' => now('UTC'), 'updated_at' => now('UTC'),
             ]);
             foreach ($lines as $line) {
+                if ($line['shortfall_quantity']) { DB::table('pos_stock_shortfalls')->insert(['seller_id' => $context->sellerId, 'sale_id' => $saleId, 'stock_id' => $line['stock_id'], 'quantity' => $line['shortfall_quantity'], 'created_at' => now('UTC')]); }
                 $legacyPrice = $line['subtotal_minor'] - ($line['snapshot']['tax_inclusive'] ? $line['tax_minor'] - $line['gst_minor'] : 0);
                 $detailId = DB::table('order_details')->insertGetId([
                     'order_id' => $orderId, 'seller_id' => $context->sellerId, 'product_id' => $line['product_id'],
@@ -156,7 +164,7 @@ class SalePostingService
                 'number' => $receiptNumber, 'payload' => Payload::json($receipt), 'created_at' => now('UTC')]);
             app(AuditService::class)->record($context, 'sale.post', (string) $saleId,
                 ['client_sale_id' => $data['client_sale_id'], 'order_id' => $orderId, 'source' => $context->device ? 'desktop' : 'web',
-                    'inventory_mode' => $offline ? 'reserved' : 'online']);
+                    'inventory_mode' => $cached ? 'catalog' : ($offline ? 'reserved' : 'online')]);
             app(CatalogService::class)->publish($context->sellerId, 'sale', (string) $saleId, 'upsert',
                 ['sale_id' => $saleId, 'order_id' => $orderId, 'register_id' => (int) $register->id, 'status' => 'completed']);
             return $this->result($saleId);
@@ -168,6 +176,7 @@ class SalePostingService
         $sale = DB::table('pos_sales')->where('id', $id)->first();
         return ['sale_id' => $id, 'order_id' => (int) $sale->order_id, 'client_sale_id' => $sale->client_sale_id,
             'payment_status' => $sale->payment_status, 'total_minor' => (int) $sale->total_minor,
-            'receipt_id' => (int) DB::table('pos_receipts')->where('sale_id', $id)->value('id')];
+            'receipt_id' => (int) DB::table('pos_receipts')->where('sale_id', $id)->value('id'),
+            'stock_difference_units' => (int) DB::table('pos_stock_shortfalls')->where('sale_id', $id)->sum('quantity')];
     }
 }
