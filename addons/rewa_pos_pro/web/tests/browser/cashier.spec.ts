@@ -286,6 +286,7 @@ test("browser print failure never submits or cancels another sale", async ({
     await expect(
         page.getByText("Printing could not start.", { exact: false }),
     ).toBeVisible();
+    await page.getByRole("dialog",{name:"Please check this"}).getByRole("button",{name:"OK, I understand"}).click();
     const reprint = page.waitForResponse(
         (response) =>
             response.url().includes("/reprint") &&
@@ -348,6 +349,7 @@ test("owner approves a desktop pairing through store settings", async ({ page })
     expect(start.status()).toBe(201);
     const pairing = await start.json();
     await page.getByRole('button', {name: 'Settings', exact: true}).click();
+    await page.removeLocatorHandler(page.getByRole("dialog",{name:"Done",exact:true}));
     await page.getByLabel('Connection number from desktop').fill(pairing.pairing_id);
     await page.getByRole('button', {name: 'Approve computer', exact: true}).click();
     await expect(page.getByText('Computer approved. Return to the desktop app and confirm connection.')).toBeVisible();
