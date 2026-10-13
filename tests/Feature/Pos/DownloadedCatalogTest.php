@@ -66,4 +66,23 @@ class DownloadedCatalogTest extends PosTestCase
             'payload'=>['client_shift_id'=>(string)Str::uuid(),'register_id'=>1,'automatic'=>true,'opening_minor'=>0]]]])['results'][0];
         $this->assertSame('accepted',$result['status']);
     }
+    public function test_large_catalog_uses_one_upload_lookup_for_the_entire_page(): void
+    {
+        Schema::table('uploads',function(Blueprint $t){$t->string('file_name')->nullable();$t->string('external_link')->nullable();});
+        DB::table('uploads')->insert(['id'=>9,'file_name'=>'rice.png','external_link'=>'https://example.test/rice.png']);
+        app(CatalogService::class)->stock(11);
+        $payload=json_decode(DB::table('pos_catalog_entries')->where('stock_id',11)->value('payload'),true);
+        $rows=[];
+        for($i=100;$i<599;$i++) {
+            $item=$payload;$item['stock_id']=$i;$item['image_id']=9;
+            $rows[]=['seller_id'=>1,'stock_id'=>$i,'sequence'=>1,'digest'=>hash('sha256',(string)$i),'payload'=>json_encode($item)];
+        }
+        DB::table('pos_catalog_entries')->insert($rows);$c=$this->context(1,$this->device());
+        DB::enableQueryLog();DB::flushQueryLog();$page=app(CatalogService::class)->snapshot($c,null,0,500);
+        $uploads=array_filter(DB::getQueryLog(),fn($query)=>str_contains($query['query'],'from "uploads"') || str_contains($query['query'],'from `uploads`'));
+        $this->assertCount(500,$page['data']);$this->assertCount(1,$uploads);
+        $this->assertSame('https://example.test/rice.png',$page['data'][1]['image_url']);
+        DB::disableQueryLog();
+    }
+
 }

@@ -46,7 +46,7 @@ Each computer has its own approved device. The cashier's actual permissions stil
 
 ## Pictures, printers, and moving computers
 
-Public PNG, JPEG, GIF and WebP product pictures download during sync and stay on disk for offline use. Missing or unavailable pictures use a placeholder and retry on a later sync. Pictures do not block a completed financial upload. The cache is bounded to 512 MB, with a 4 MB maximum per picture. Public image URLs must respond without redirects. Store logos are also cached for receipts.
+Public PNG, JPEG, GIF and WebP product pictures download during sync and stay on disk for offline use. Missing or unavailable pictures use a placeholder and retry on a later sync. Pictures do not block a completed financial upload. The cache is bounded to 512 MB, with a 4 MB maximum per picture. Old or unused pictures are evicted to make room for current ones. Public image URLs must respond without redirects. Store logos are also cached for receipts.
 
 Install the printer's Windows driver once, then choose the installed printer and 58 mm or 80 mm paper in Settings. Barcode scanners work as a keyboard.
 

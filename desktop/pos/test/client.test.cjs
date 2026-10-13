@@ -81,3 +81,9 @@ test('old register conflicts queue ordered corrections and retain original paid 
  f.client.repairShiftConflicts();assert.equal(f.store.events(true).length,2);
  for(const e of corrections)f.client.applyAck({event_id:e.event_id,status:'accepted',durable:true,shift_id:1,sale_id:10});assert.equal(f.store.reviews().length,0);assert.equal(f.store.events().length,4);
 });
+test('legacy reservation cleanup cannot wedge sync after inventory permission is removed',async t=>{
+ const f=fixture(t);f.boot.offline_catalog_sales=true;f.boot.abilities=f.boot.abilities.filter(a=>a!=='pos:inventory:write');f.store.set('boot',f.boot);
+ const id=randomUUID();f.store.db.prepare('INSERT INTO requests(id,path,payload) VALUES(?,?,?)').run(id,'inventory/allocations/reconcile',JSON.stringify({payload:{allocations:[]},context:{}}));
+ const network=f.client.transport;let denied=0;f.client.transport=async(url,o)=>{if(url.endsWith('/inventory/allocations/reconcile')){denied++;const e=Error('No longer permitted');e.status=403;e.code='PERMISSION_DENIED';throw e;}return network(url,o);};
+ f.client.openShift(0);const result=await f.client.sync();assert.equal(f.store.events(true).length,0);assert.equal(f.client.unresolved().length,1);assert.equal(result.syncSummary.waiting,1);await f.client.sync();assert.equal(f.client.unresolved().length,1);assert.equal(denied,2);assert.ok(f.store.meta('last_sync'));
+});

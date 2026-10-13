@@ -145,7 +145,7 @@ app.whenReady().then(() => {
   ipcMain.handle('pos:command', (event, command, data) => {
     if (event.sender !== window.webContents || event.senderFrame !== window.webContents.mainFrame) throw Error('Unauthorized frame.');
     if (typeof command !== 'string' || JSON.stringify(data || {}).length > 1048576) throw Error('Invalid request.');
-    const task = serial.then(async () => { const result = await execute(command, data); if (['sync', 'pairConfirm', 'connect'].includes(command) && !store.meta('manual_offline')) { await Promise.all([cacheBrandLogo(), images.cache(store.list('catalog'))]); return {...result,...client.state()}; } return result; }); serial = task.catch(() => {});
+    const task = serial.then(async () => { const result = await execute(command, data); if (['sync', 'pairConfirm', 'connect'].includes(command) && !store.meta('manual_offline')) { await Promise.all([cacheBrandLogo(), images.cache(store.list('catalog')).catch(() => {})]); return {...result,...client.state()}; } return result; }); serial = task.catch(() => {});
     return task.then(result => ({ok: true, result}), error => ({ok: false, error: error.message, code: error.code}));
   });
   window.loadFile(path.join(__dirname, 'index.html'));

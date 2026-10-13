@@ -63,15 +63,19 @@ class CatalogService
         }, 5);
     }
 
-    private function decorate(PosContext $context, array $item): array
+    private function decoratePage(PosContext $context, array $items): array
     {
-        $item['image_url'] = null;
-        if (!empty($item['image_id']) && Schema::hasColumn('uploads', 'file_name')) {
-            $image = DB::table('uploads')->where('id', $item['image_id'])->first();
+        $ids = array_values(array_unique(array_filter(array_column($items, 'image_id'))));
+        $images = $ids && Schema::hasColumn('uploads', 'file_name')
+            ? DB::table('uploads')->whereIn('id', $ids)->get()->keyBy('id') : collect();
+        $signer = app(OfflinePolicySigner::class); $offline = app(OfflineCatalogService::class);
+        return array_map(function (array $item) use ($context, $images, $signer, $offline) {
+            $item['image_url'] = null;
+            $image = $images[$item['image_id'] ?? null] ?? null;
             $url = $image ? (($image->external_link ?? null) ?: my_asset($image->file_name)) : null;
             if ($url && preg_match('~^https?://~i', $url)) { $item['image_url'] = $url; }
-        }
-        return app(OfflineCatalogService::class)->authorize($context, $item);
+            return $offline->authorize($context, $item, $signer);
+        }, $items);
     }
 
     public function product(int $productId): void
@@ -113,7 +117,7 @@ class CatalogService
         $more = $items->count() > $limit; $items = $items->take($limit);
         return ['snapshot_id' => $snapshotId, 'high_water_mark' => (int) $snapshot->high_water_mark,
             'next_after' => $items->last()?->stock_id ?? $after, 'has_more' => $more,
-            'data' => $items->map(fn ($item) => $this->decorate($context, json_decode($item->payload, true, 512, JSON_THROW_ON_ERROR)))->all()];
+            'data' => $this->decoratePage($context, $items->map(fn ($item) => json_decode($item->payload, true, 512, JSON_THROW_ON_ERROR))->all())];
     }
 
     public function changes(PosContext $context, int $cursor, int $limit, bool $catalogOnly = true): array
@@ -138,9 +142,14 @@ class CatalogService
         }
         $rows = $query->orderBy('sequence')->limit($limit + 1)->get();
         $more = $rows->count() > $limit; $rows = $rows->take($limit);
-        return ['cursor' => $more ? (int) $rows->last()->sequence : $head, 'has_more' => $more,
-            'data' => $rows->map(fn ($r) => ['sequence' => (int) $r->sequence, 'entity' => $r->entity,
-                'id' => $r->entity_id, 'operation' => $r->operation,
-                'payload' => $r->entity === 'catalog' && $r->operation === 'upsert' ? $this->decorate($context, json_decode($r->payload, true, 512, JSON_THROW_ON_ERROR)) : json_decode($r->payload, true, 512, JSON_THROW_ON_ERROR)])->all()];
+        $data = $rows->map(fn ($r) => ['sequence' => (int) $r->sequence, 'entity' => $r->entity,
+            'id' => $r->entity_id, 'operation' => $r->operation,
+            'payload' => json_decode($r->payload, true, 512, JSON_THROW_ON_ERROR)])->all();
+        $catalog = [];
+        foreach ($data as $i => $row) {
+            if ($row['entity'] === 'catalog' && $row['operation'] === 'upsert') { $catalog[$i] = $row['payload']; }
+        }
+        foreach ($this->decoratePage($context, $catalog) as $i => $payload) { $data[$i]['payload'] = $payload; }
+        return ['cursor' => $more ? (int) $rows->last()->sequence : $head, 'has_more' => $more, 'data' => $data];
     }
 }

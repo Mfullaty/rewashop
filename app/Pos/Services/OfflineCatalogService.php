@@ -7,13 +7,14 @@ use Illuminate\Support\Facades\DB;
 
 class OfflineCatalogService
 {
-    public function authorize(PosContext $context, array $item): array
+    public function authorize(PosContext $context, array $item, ?OfflinePolicySigner $signer = null): array
     {
+        $signer ??= app(OfflinePolicySigner::class);
         if (!$context->device || !config('pos.offline_enabled') || !$context->device->offline_allowed ||
-            !app(OfflinePolicySigner::class)->publicKey()) { return $item; }
+            !$signer->publicKey()) { return $item; }
         $price = $item; unset($price['available_quantity'], $price['image_url'], $price['offline_policy']);
         $price['max_discount_bps'] = $context->maxDiscountBps;
-        $item['offline_policy'] = app(OfflinePolicySigner::class)->sign([
+        $item['offline_policy'] = $signer->sign([
             'schema_version' => 1, 'mode' => 'catalog', 'seller_id' => $context->sellerId,
             'device_id' => $context->device->id, 'register_id' => (int) $context->device->register_id,
             'stock_id' => (int) $item['stock_id'], 'price_snapshot' => $price,

@@ -138,6 +138,7 @@ class Client {
     for (const row of this.unresolved()) {
       try { await this.replayRequest(row); }
       catch (e) {
+        if(row.path==='inventory/allocations/reconcile' && e.status===403 && ['PERMISSION_DENIED','OFFLINE_DISABLED'].includes(e.code)) continue;
         const saved = this.s.db.prepare('SELECT response FROM requests WHERE id=?').get(row.id);
         if (!saved?.response || !JSON.parse(saved.response).rejected) throw e;
         // Preserve the definitive rejection as evidence, and continue recovering
@@ -161,13 +162,16 @@ class Client {
     }
     await this.refreshBootstrap();
     if (this.boot().offline_catalog_sales) this.s.set('cursor_ready', false);
-    if(this.boot().offline_catalog_sales && !this.s.events(true).some(e=>e.type==='sale.completed' && e.payload.inventory_mode!=='catalog') && !this.s.reviews().some(e=>e.type==='sale.completed' && e.payload.inventory_mode!=='catalog')) {
+    if(this.boot().offline_catalog_sales && this.boot().device?.offline_allowed && this.boot().abilities.includes('pos:inventory:write') && !this.unresolved().some(r=>r.path==='inventory/allocations/reconcile') && !this.s.events(true).some(e=>e.type==='sale.completed' && e.payload.inventory_mode!=='catalog') && !this.s.reviews().some(e=>e.type==='sale.completed' && e.payload.inventory_mode!=='catalog')) {
       const old=this.s.list('allocation').filter(a=>a.status==='open');
-      for(let i=0;i<old.length;i+=200) await this.mutation('inventory/allocations/reconcile',{checkpoint_sequence:this.s.meta('sequence',0),pending_events:0,allocations:old.slice(i,i+200).map(a=>({allocation_id:a.allocation_id,consumed_quantity:a.consumed}))});
+      for(let i=0;i<old.length;i+=200) {
+        try { await this.mutation('inventory/allocations/reconcile',{checkpoint_sequence:this.s.meta('sequence',0),pending_events:0,allocations:old.slice(i,i+200).map(a=>({allocation_id:a.allocation_id,consumed_quantity:a.consumed}))}); }
+        catch(e) { if(e.status===403 && ['PERMISSION_DENIED','OFFLINE_DISABLED'].includes(e.code)) break; throw e; }
+      }
     }
     await this.refreshCatalog();
     await this.refreshAllocations();
-    this.s.set('restore_pending', false); this.s.set('last_sync', Date.now()); return {...this.state(), syncSummary: {uploaded: this.s.events().filter(e => success(e.ack)).length, waiting: this.s.events(true).length + this.s.reviews().length}};
+    this.s.set('restore_pending', false); this.s.set('last_sync', Date.now()); return {...this.state(), syncSummary: {uploaded: this.s.events().filter(e => success(e.ack)).length, waiting: this.s.events(true).length + this.s.reviews().length + this.unresolved().length}};
   }
   async refreshCatalog() {
     if (!this.s.meta('cursor_ready')) {
@@ -215,11 +219,16 @@ class Client {
     return b;
   }
   serverNow() { return Date.now() + this.s.meta('server_offset', 0); }
-  available(stockId) {
-    const item = this.s.get('catalog', stockId); if (!item) return 0;
-    const applied=new Set(this.s.meta('catalog_applied_sales',[]));
-    const unposted = this.s.list('sale').filter(s => s.mode === 'offline' && !applied.has(s.client_sale_id) && s.lines.some(l => l.catalog_policy));
-    return Math.max(0, Number(item.available_quantity) - unposted.reduce((n, sale) => n + sale.lines.filter(l => l.stock_id === stockId).reduce((a,l) => a + l.quantity, 0), 0));
+  localStockUse() {
+    const applied=new Set(this.s.meta('catalog_applied_sales',[])),used=new Map();
+    for(const sale of this.s.list('sale')) {
+      if(sale.mode!=='offline'||applied.has(sale.client_sale_id))continue;
+      for(const line of sale.lines) if(line.catalog_policy)used.set(line.stock_id,(used.get(line.stock_id)||0)+line.quantity);
+    }
+    return used;
+  }
+  available(stockId, used = this.localStockUse()) {
+    const item=this.s.get('catalog',stockId);return item ? Math.max(0,Number(item.available_quantity)-(used.get(stockId)||0)) : 0;
   }
   ensureShift() {
     if (this.s.meta('shift')?.status === 'open') return this.s.meta('shift');
@@ -238,6 +247,7 @@ class Client {
   }
   quote(cart, mode = 'offline') {
     const b = this.boot(); if (!Array.isArray(cart) || !cart.length || cart.length > 200 || new Set(cart.map(l => l.stock_id)).size !== cart.length) throw Error('Add between 1 and 200 distinct products.');
+    const used = this.localStockUse();
     const lines = cart.map(input => {
       integer(input.stock_id, 1); integer(input.quantity, 1, 10000); const allocation = mode === 'offline' ? this.allocation(input.stock_id, input.quantity) : null;
       const catalog = this.s.get('catalog', input.stock_id), cached = mode === 'offline' && b.offline_catalog_sales;
@@ -245,7 +255,7 @@ class Client {
       if (cached) {
         if (!item?.offline_policy) throw Error('Click Connect and Sync once to download this product for offline sales.');
         verifyPolicy(item.offline_policy, b, this.serverNow());
-        if (input.quantity > this.available(input.stock_id)) throw Error('Only ' + this.available(input.stock_id) + ' of this product remain in the downloaded stock list. Reduce the quantity or sync the latest stock.');
+        if (input.quantity > this.available(input.stock_id, used)) throw Error('Only ' + this.available(input.stock_id, used) + ' of this product remain in the downloaded stock list. Reduce the quantity or sync the latest stock.');
       }
       if (!item) throw Error('Product is unavailable, offline stock is insufficient, or its permission expired.');
       if (input.discount_minor && !b.abilities.includes('pos:discount:write')) throw Error('Discount permission is required.');
@@ -392,8 +402,8 @@ class Client {
   }
   async report(from, to) { this.require('report:read'); const data = await this.api('reports/summary?' + new URLSearchParams({...(from ? {from} : {}), ...(to ? {to} : {})})); this.s.set('report', data); return data; }
   state() {
-    const boot = this.s.meta('boot');
-    return {manualOffline: !!this.s.meta('manual_offline'), paired: !!this.s.meta('credential'), origin: this.s.meta('origin', 'https://rewashop.com'), boot, shift: this.s.meta('shift'), catalog: this.s.list('catalog').map(item => ({...item, local_quantity: this.available(item.stock_id), image_src: item.image_url && this.s.get('photo', createHash('sha256').update(item.image_url).digest('hex')) ? 'pos-image://cache/' + createHash('sha256').update(item.image_url).digest('hex') : null})), allocations: this.s.list('allocation'), sales: this.s.list('sale').reverse(), returns: this.s.list('return'), events: this.s.events().map(e => ({...e, review_resolved: !!this.s.get('resolved', e.event_id)})), pendingRequests: this.unresolved().map(r => ({id: r.id, path: r.path})), requestFailures: this.s.db.prepare('SELECT id,path,response FROM requests WHERE response IS NOT NULL').all().map(r => ({id:r.id,path:r.path,...JSON.parse(r.response)})).filter(r => r.rejected), blocked: this.s.meta('blocked'), transferLocked: this.s.meta('transfer_locked'), cart: this.s.meta('cart', []), held: this.s.list('held'), lastSync: this.s.meta('last_sync'), remoteSales: this.s.meta('remote_sales'), report: this.s.meta('report'), pairing: this.s.meta('pairing') ? {pairing_id: this.s.meta('pairing').pairing_id, expires_at: this.s.meta('pairing').expires_at, recovery_device_id: boot?.device_id} : null};
+    const boot = this.s.meta('boot'), used = this.localStockUse();
+    return {manualOffline: !!this.s.meta('manual_offline'), paired: !!this.s.meta('credential'), origin: this.s.meta('origin', 'https://rewashop.com'), boot, shift: this.s.meta('shift'), catalog: this.s.list('catalog').map(item => ({...item, local_quantity: this.available(item.stock_id, used), image_src: item.image_url && this.s.get('photo', createHash('sha256').update(item.image_url).digest('hex')) ? 'pos-image://cache/' + createHash('sha256').update(item.image_url).digest('hex') : null})), allocations: this.s.list('allocation'), sales: this.s.list('sale').reverse(), returns: this.s.list('return'), events: this.s.events().map(e => ({...e, review_resolved: !!this.s.get('resolved', e.event_id)})), pendingRequests: this.unresolved().map(r => ({id: r.id, path: r.path})), requestFailures: this.s.db.prepare('SELECT id,path,response FROM requests WHERE response IS NOT NULL').all().map(r => ({id:r.id,path:r.path,...JSON.parse(r.response)})).filter(r => r.rejected), blocked: this.s.meta('blocked'), transferLocked: this.s.meta('transfer_locked'), cart: this.s.meta('cart', []), held: this.s.list('held'), lastSync: this.s.meta('last_sync'), remoteSales: this.s.meta('remote_sales'), report: this.s.meta('report'), pairing: this.s.meta('pairing') ? {pairing_id: this.s.meta('pairing').pairing_id, expires_at: this.s.meta('pairing').expires_at, recovery_device_id: boot?.device_id} : null};
   }
 }
 module.exports = {Client, success};
