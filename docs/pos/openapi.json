@@ -11,6 +11,330 @@
     }
   ],
   "paths": {
+    "/api/pos/v1/receipts/verify/{token}": {
+      "get": {
+        "operationId": "device___invoke",
+        "summary": "Verify a stored receipt through its private bearer QR token.",
+        "tags": [
+          "Device API"
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Committed result or read response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Typed POS error; retain unacknowledged local events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Typed POS error; retain unacknowledged local events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Typed POS error; retain unacknowledged local events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Typed POS error; retain unacknowledged local events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Typed POS error; retain unacknowledged local events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Typed POS error; retain unacknowledged local events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "419": {
+            "description": "Typed POS error; retain unacknowledged local events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Typed POS error; retain unacknowledged local events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "426": {
+            "description": "Typed POS error; retain unacknowledged local events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Typed POS error; retain unacknowledged local events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Typed POS error; retain unacknowledged local events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Typed POS error; retain unacknowledged local events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{43}$"
+            }
+          }
+        ]
+      }
+    },
+    "/api/pos/v1/receipts/check/{key}": {
+      "get": {
+        "operationId": "device_signed",
+        "summary": "Verify a device-signed receipt immediately, without any sale upload.",
+        "tags": [
+          "Device API"
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Committed result or read response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Typed POS error; retain unacknowledged local events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Typed POS error; retain unacknowledged local events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Typed POS error; retain unacknowledged local events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Typed POS error; retain unacknowledged local events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Typed POS error; retain unacknowledged local events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Typed POS error; retain unacknowledged local events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "419": {
+            "description": "Typed POS error; retain unacknowledged local events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Typed POS error; retain unacknowledged local events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "426": {
+            "description": "Typed POS error; retain unacknowledged local events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Typed POS error; retain unacknowledged local events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Typed POS error; retain unacknowledged local events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Typed POS error; retain unacknowledged local events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{32}$"
+            }
+          },
+          {
+            "name": "p",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 6000
+            }
+          },
+          {
+            "name": "s",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 86
+            }
+          }
+        ]
+      }
+    },
     "/api/pos/v1/health": {
       "get": {
         "operationId": "device_health",
@@ -3791,6 +4115,163 @@
             }
           }
         ]
+      }
+    },
+    "/api/pos/v1/devices/receipt-key": {
+      "post": {
+        "operationId": "device_receiptKey",
+        "summary": "Enroll the approved computer public key used for offline receipt signatures.",
+        "tags": [
+          "Device API"
+        ],
+        "security": [
+          {
+            "PosDeviceBearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Committed result or read response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Typed POS error; retain unacknowledged local events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Typed POS error; retain unacknowledged local events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Typed POS error; retain unacknowledged local events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Typed POS error; retain unacknowledged local events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Typed POS error; retain unacknowledged local events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Typed POS error; retain unacknowledged local events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "419": {
+            "description": "Typed POS error; retain unacknowledged local events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Typed POS error; retain unacknowledged local events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "426": {
+            "description": "Typed POS error; retain unacknowledged local events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Typed POS error; retain unacknowledged local events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Typed POS error; retain unacknowledged local events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Typed POS error; retain unacknowledged local events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReceiptKeyRequest"
+              }
+            }
+          }
+        }
       }
     },
     "/api/pos/v1/inventory/allocations": {
@@ -9903,6 +10384,34 @@
               1
             ]
           },
+          "receipt_proof": {
+            "type": "object",
+            "properties": {
+              "key_id": {
+                "type": "string",
+                "minLength": 32,
+                "maxLength": 32
+              },
+              "payload": {
+                "type": "string",
+                "maxLength": 6000
+              },
+              "signature": {
+                "type": "string",
+                "minLength": 86,
+                "maxLength": 86
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "key_id",
+              "payload",
+              "signature"
+            ]
+          },
+          "verification_token": {
+            "type": "string"
+          },
           "client_sale_id": {
             "type": "string",
             "format": "uuid"
@@ -10382,6 +10891,27 @@
           }
         },
         "additionalProperties": false
+      },
+      "ReceiptKeyRequest": {
+        "type": "object",
+        "properties": {
+          "schema_version": {
+            "type": "integer",
+            "format": "int64",
+            "enum": [
+              1
+            ]
+          },
+          "public_key": {
+            "type": "string",
+            "minLength": 44,
+            "maxLength": 44
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "public_key"
+        ]
       },
       "AllocateRequest": {
         "type": "object",
@@ -11013,6 +11543,34 @@
             "enum": [
               1
             ]
+          },
+          "receipt_proof": {
+            "type": "object",
+            "properties": {
+              "key_id": {
+                "type": "string",
+                "minLength": 32,
+                "maxLength": 32
+              },
+              "payload": {
+                "type": "string",
+                "maxLength": 6000
+              },
+              "signature": {
+                "type": "string",
+                "minLength": 86,
+                "maxLength": 86
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "key_id",
+              "payload",
+              "signature"
+            ]
+          },
+          "verification_token": {
+            "type": "string"
           },
           "client_sale_id": {
             "type": "string",

@@ -5,18 +5,23 @@ const fs = require('node:fs');
 const {randomUUID} = require('node:crypto');
 const {Store} = require('./store.cjs');
 const {Client} = require('./client.cjs');
+const {AutoSync}=require('./auto-sync.cjs');
+const {receiptHTML} = require('./receipt.cjs');
 const {Images, hash} = require('./images.cjs');
 protocol.registerSchemesAsPrivileged([{scheme:'pos-image',privileges:{standard:true,secure:true,supportFetchAPI:true}}]);
 const {seal, unseal} = require('./backup.cjs');
-let window, store, client, images, serial = Promise.resolve();
+let window, store, client, images, autoSync, background=false, foreground=0, serial=Promise.resolve(), localSerial=Promise.resolve();
+const requests=new Set();
+async function controlledFetch(url,options={}){if(store?.meta('manual_offline'))throw Error('The POS is disconnected.');const controller=new AbortController();requests.add(controller);const signal=AbortSignal.any([options.signal||AbortSignal.timeout(25000),controller.signal]);signal.addEventListener('abort',()=>requests.delete(controller),{once:true});try{return await fetch(url,{...options,signal});}catch(error){requests.delete(controller);throw error;}}
+function cancelRequests(){for(const request of requests)request.abort();}
 if (!app.requestSingleInstanceLock()) app.quit();
 app.on('second-instance', () => { window?.show(); window?.focus(); });
 app.on('window-all-closed', () => app.quit());
-app.on('before-quit', () => store?.close());
+app.on('before-quit', () => {autoSync?.stop();cancelRequests();store?.close();});
 async function transport(url, options) {
   const body = options.body === undefined ? undefined : JSON.stringify(options.body);
   if (body && Buffer.byteLength(body) > 1048576) throw Error('This operation exceeds the backend request limit.');
-  const response = await fetch(url, {method: options.method, redirect: 'error', signal: AbortSignal.timeout(25000), headers: {Accept: 'application/json', 'Content-Type': 'application/json', ...(options.token ? {Authorization: 'Bearer ' + options.token} : {}), ...(options.key ? {'Idempotency-Key': options.key} : {})}, body});
+  const response = await controlledFetch(url, {method: options.method, redirect: 'error', signal: AbortSignal.timeout(25000), headers: {Accept: 'application/json', 'Content-Type': 'application/json', ...(options.token ? {Authorization: 'Bearer ' + options.token} : {}), ...(options.key ? {'Idempotency-Key': options.key} : {})}, body});
   const text = await response.text(); if (text.length > 16000000) throw Error('Server response is too large.');
   let data; try { data = JSON.parse(text); } catch { throw Error('Server response was not valid JSON. The saved request will be retried.'); }
   if (!response.ok) { const e = Error(data.error?.message || data.message || 'Request failed.'); e.status = response.status; e.code = data.error?.code; throw e; }
@@ -49,10 +54,13 @@ async function execute(command, data = {}) {
     case 'pairStart': return client.pairStart(data.origin, data.name);
     case 'pairConfirm': return client.pairConfirm();
     case 'sync': return client.sync();
-    case 'disconnect': return client.disconnect();
+    case 'disconnect': {const state=client.disconnect();cancelRequests();return state;}
     case 'connect': return client.connect();
-    case 'quote': return client.quote(data.cart, data.mode);
-    case 'checkout': return client.checkout(data);
+    case 'quote': {const quote=client.quote(data.cart,data.mode);if(data.payment)store.set('checkout_lock',true);return quote;}
+    case 'checkoutLock': store.set('checkout_lock',!!data.locked);if(!data.locked)autoSync?.kick();return true;
+    case 'wakeSync': autoSync?.kick();return true;
+    case 'setAutoSync': if(typeof data.enabled!=='boolean')throw Error('Choose whether automatic sync is on.');store.set('auto_sync',data.enabled);if(!data.enabled && background)cancelRequests();if(data.enabled)autoSync?.kick();return client.state();
+    case 'checkout': if(!store.meta('receipt_signing_key'))throw Error('Connect once to finish the receipt signing setup. After that, receipts can be issued and verified without uploading each sale.'); return client.checkout(data);
     case 'openShift': return client.openShift(data.opening_minor);
     case 'closeShift': return client.closeShift(data.counted_minor, data.reason);
     case 'cash': return client.cash(data.amount_minor, data.reason);
@@ -74,8 +82,10 @@ async function execute(command, data = {}) {
     case 'manager': { const origin = store.meta('origin'); if (!origin?.startsWith('https://')) throw Error('Connect to RewaShop first.'); await shell.openExternal(origin + (client.boot().owner_type === 'admin' ? '/admin/rewa-pos' : '/seller/rewa-pos')); return true; }
     case 'printers': return window.webContents.getPrintersAsync();
     case 'print': {
-      const receipt = store.get('sale', data.client_sale_id) || store.get('receipt', data.receipt_id);
+      let receipt = store.get('sale', data.client_sale_id) || store.get('receipt', data.receipt_id);
       if (!receipt) throw Error('Receipt is not saved.'); client.require('receipt:read');
+      receipt=await client.prepareReceipt(receipt);if(data.client_sale_id)store.put('sale',data.client_sale_id,receipt);
+      const verification=new URL(receipt.verification_url);if(verification.origin!==new URL(store.meta('origin')).origin || !(/^\/api\/pos\/v1\/receipts\/verify\/[A-Za-z0-9_-]{43}$/.test(verification.pathname)||(/^\/api\/pos\/v1\/receipts\/check\/[a-f0-9]{32}$/.test(verification.pathname)&&verification.searchParams.has('p')&&verification.searchParams.has('s'))))throw Error('The receipt verification address does not match your shop. Ask RewaShop to check the website address.');
       if (data.reprint) client.reprint({...receipt, receipt_id: receipt.server?.receipt_id || data.receipt_id, sale_id: receipt.server?.sale_id || receipt.sale_id});
       await printReceipt(receipt, data); return true;
     }
@@ -87,7 +97,7 @@ async function cacheBrandLogo() {
   if (!url || store.get('image', url)) return;
   try {
     const parsed = new URL(url); if (parsed.protocol !== 'https:' || parsed.username || parsed.password) return;
-    const response = await fetch(url, {redirect: 'error', signal: AbortSignal.timeout(10000)});
+    const response = await controlledFetch(url, {redirect: 'error', signal: AbortSignal.timeout(10000)});
     if (!response.ok || Number(response.headers.get('content-length')) > 2097152) return;
     const reader = response.body.getReader(), chunks = []; let size = 0;
     while (true) { const {done, value} = await reader.read(); if (done) break; size += value.length; if (size > 2097152) { await reader.cancel(); return; } chunks.push(Buffer.from(value)); }
@@ -100,13 +110,12 @@ const escape = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<'
 async function printReceipt(r, options) {
   const width = options.width === 58 ? 58 : 80, money = n => new Intl.NumberFormat('en-NG', {style: 'currency', currency: r.currency}).format(n / 100);
   const w = new BrowserWindow({show: false, webPreferences: {sandbox: true, contextIsolation: true, nodeIntegration: false}});
-  const storeBrand = r.store || {}, logo = store.get('image', r.store?.logo_url), rows = r.lines.map(l => `<tr><td>${escape(l.snapshot?.name)} ${escape(l.snapshot?.variant)} × ${escape(l.quantity)}</td><td>${escape(money(l.total_minor))}</td></tr>`).join('');
-  const html = `<!doctype html><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:"><style>@page{size:${width}mm auto;margin:3mm}body{font:11px Arial;width:${width - 8}mm;margin:auto}h1{font-size:16px;text-align:center}p{text-align:center}table{width:100%}td{padding:4px 0;vertical-align:top}td:last-child{text-align:right}hr{border:0;border-top:1px dashed #333}</style>${logo ? `<p><img alt="Store logo" src="${escape(logo)}" width="80"></p>` : ''}<h1>${escape(storeBrand.name)}</h1><p>${escape(storeBrand.address)}<br>${escape(storeBrand.phone)} ${escape(storeBrand.email)}<br>${escape(storeBrand.tax_details)}</p><hr><p>${escape(r.number)}<br>${escape(r.client_sale_id)}<br>${escape(r.occurred_at)}<br>${escape(r.customer?.name)}</p><table>${rows}</table><hr><table><tr><td>Discount</td><td>${escape(money(r.discount_minor))}</td></tr><tr><td>Tax</td><td>${escape(money(r.tax_minor))}</td></tr><tr><td><b>Total</b></td><td><b>${escape(money(r.total_minor))}</b></td></tr>${r.tenders.map(t => `<tr><td>${escape(t.method)}</td><td>${escape(money(t.amount_minor))}</td></tr>${t.method === 'cash' ? `<tr><td>Received / Change</td><td>${escape(money(t.received_minor))} / ${escape(money(t.change_minor))}</td></tr>` : ''}`).join('')}</table><p>${escape(r.sync_status === 'pending' ? 'Recorded locally. Awaiting sync.' : r.sync_status === 'needs_review' ? 'Saved on this computer. Waiting for upload.' : r.payment_status || r.server?.payment_status || 'Recorded')}<br>${options.reprint ? 'COPY' : ''}</p><hr><p>${escape(storeBrand.footer)}</p>`;
-  try { await w.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html)); await w.webContents.executeJavaScript('Promise.all(Array.from(document.images).map(image => image.decode().catch(() => {})))'); await new Promise((resolve, reject) => w.webContents.print({silent: !!options.printer, deviceName: options.printer || undefined, printBackground: false}, (ok, reason) => ok ? resolve() : reject(Error(reason)))); } finally { w.destroy(); }
+  const logo = store.get('image', r.store?.logo_url), html = receiptHTML(r,{width,logo});
+  try { await w.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html)); await w.webContents.executeJavaScript('Promise.all(Array.from(document.images).map(image => image.decode().catch(() => {})))'); const height=Math.max(60000,Math.ceil(await w.webContents.executeJavaScript('document.querySelector(".receipt").getBoundingClientRect().height')*25400/96)+2000); await new Promise((resolve, reject) => w.webContents.print({pageSize:{width:width*1000,height},margins:{marginType:'none'},silent: !!options.printer, deviceName: options.printer || undefined, printBackground: false}, (ok, reason) => ok ? resolve() : reject(Error(reason)))); } finally { w.destroy(); }
 }
 app.whenReady().then(() => {
   fs.mkdirSync(app.getPath('userData'), {recursive: true}); store = new Store(path.join(app.getPath('userData'), 'pos.sqlite'));
-  images = new Images(path.join(app.getPath('userData'), 'product-images'), store);
+  images = new Images(path.join(app.getPath('userData'), 'product-images'), store,controlledFetch);
   protocol.handle('pos-image', request => { const picture=images.read(request.url); return picture ? new Response(picture.bytes,{headers:{'Content-Type':picture.type,'Cache-Control':'public, max-age=86400'}}) : new Response('Picture unavailable',{status:404}); });
   // Electron 44 safeStorage supports synchronous encryption. Fail closed if no
   // operating-system credential protection is available.
@@ -133,6 +142,9 @@ app.whenReady().then(() => {
       if (!await smokeWindow.webContents.executeJavaScript('typeof window.pos.command === "function" && !!document.querySelector("#content")')) throw Error('Preload bridge failed.');
       await smokeWindow.webContents.executeJavaScript('window.pos.command("state")');
       if (errors.length) throw Error(errors.join('\n'));
+      const fixture={store:{name:'Smoke Shop',address:'Market Road'},occurred_at:new Date().toISOString(),currency:'NGN',lines:[{snapshot:{name:'Rice'},quantity:1,unit_price_minor:10000,total_minor:10000}],total_minor:10000,tenders:[{method:'cash',amount_minor:10000,received_minor:10000,change_minor:0}],verification_url:'https://rewashop.com/api/pos/v1/receipts/verify/'+ 'a'.repeat(43)};
+      await smokeWindow.loadURL('data:text/html;charset=utf-8,'+encodeURIComponent(receiptHTML(fixture)));
+      if(!await smokeWindow.webContents.executeJavaScript('(async()=>{await document.querySelector(".qr").decode();return document.body.textContent.includes("CASH RECEIPT")&&document.querySelector(".qr").naturalWidth>0;})()'))throw Error('Bundled receipt and QR failed.');
       smokeWindow.destroy(); app.exit(0);
     };
     run().catch(e => { fs.writeFileSync(path.join(app.getPath('userData'), 'smoke-failure.txt'), e.stack); app.exit(1); });
@@ -145,8 +157,19 @@ app.whenReady().then(() => {
   ipcMain.handle('pos:command', (event, command, data) => {
     if (event.sender !== window.webContents || event.senderFrame !== window.webContents.mainFrame) throw Error('Unauthorized frame.');
     if (typeof command !== 'string' || JSON.stringify(data || {}).length > 1048576) throw Error('Invalid request.');
-    const task = serial.then(async () => { const result = await execute(command, data); if (['sync', 'pairConfirm', 'connect'].includes(command) && !store.meta('manual_offline')) { await Promise.all([cacheBrandLogo(), images.cache(store.list('catalog')).catch(() => {})]); return {...result,...client.state()}; } return result; }); serial = task.catch(() => {});
-    return task.then(result => ({ok: true, result}), error => ({ok: false, error: error.message, code: error.code}));
+    const local=['state','quote','checkoutLock','wakeSync','setAutoSync','saveCart','hold','resume','disconnect','print','openShift','closeShift','cash'].includes(command)||(command==='checkout'&&data?.mode==='offline');
+    foreground++;
+    const executeTask=async()=>{const result=await execute(command,data);if(['sync','pairConfirm','connect'].includes(command)&&!store.meta('manual_offline')){await Promise.all([cacheBrandLogo(),images.cache(store.list('catalog')).catch(()=>{})]);return {...result,...client.state()};}return result;};
+    const task=(background&&local?localSerial:serial).then(executeTask);
+    if(background&&local)localSerial=task.catch(()=>{});else serial=task.catch(()=>{});
+    task.finally(()=>{foreground--;if(['checkout','openShift','closeShift','cash','refund','pairConfirm','connect'].includes(command))autoSync?.kick();}).catch(()=>{});
+    return task.then(result=>({ok:true,result}),error=>({ok:false,error:error.message,code:error.code}));
   });
+  autoSync=new AutoSync({
+    shouldRun:()=>foreground===0&&!!store.meta('credential')&&store.meta('auto_sync',true)&&!store.meta('manual_offline')&&!store.meta('transfer_locked')&&!store.meta('restore_pending')&&!store.meta('blocked'),
+    run:()=>{const task=serial.then(async()=>{if(store.meta('manual_offline')||!store.meta('auto_sync',true))return;background=true;try{await client.sync();if(!store.meta('manual_offline'))await Promise.all([cacheBrandLogo(),images.cache(store.list('catalog')).catch(()=>{})]);}finally{background=false;}});serial=task.catch(()=>{});return task;},
+    onStatus:status=>{const previous=store.meta('auto_sync_status',{});const update={...previous,...status};store.set('auto_sync_status',update);window?.webContents.send('pos:sync-status',update);}
+  });
+  autoSync.start();
   window.loadFile(path.join(__dirname, 'index.html'));
 }).catch(e => { dialog.showErrorBox('RewaShop POS could not open', e.message); app.quit(); });

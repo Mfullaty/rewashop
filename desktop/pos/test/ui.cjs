@@ -14,7 +14,7 @@ const {Store}=require('../src/store.cjs'),{Client}=require('../src/client.cjs');
  try{
   const page=await browser.newPage({viewport:{width:1366,height:850}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.exposeFunction('__command',async(c,d)=>{
-   if(c==='state')return client.state();if(c==='quote')return client.quote(d.cart,d.mode);
+   if(c==='checkoutLock'||c==='wakeSync')return true;if(c==='state')return client.state();if(c==='quote')return client.quote(d.cart,d.mode);
    if(c==='saveCart'){s.set('cart',d.cart);return true;}
    if(c==='hold'){s.put('held','1',{id:'1',name:d.name,cart:s.meta('cart')});s.set('cart',[]);return client.state();}
    throw Error('Unexpected UI command '+c);
@@ -22,7 +22,10 @@ const {Store}=require('../src/store.cjs'),{Client}=require('../src/client.cjs');
   await page.addInitScript(()=>{window.pos={command:(c,d)=>window.__command(c,d)};});
   await page.goto('file://'+path.resolve(__dirname,'../src/index.html'));await page.getByRole('heading',{name:'Ready for your next customer'}).waitFor();
   await page.locator('#mode').selectOption('online');await page.locator('[data-add="11"]').click();await page.waitForFunction(()=>document.querySelector('#cart-summary').textContent.includes('100.00'));
-  await page.getByRole('button',{name:'Take payment'}).click();await page.getByRole('heading',{name:/Take payment/}).waitFor();assert.equal(await page.locator('#payment-form input[name=received]').inputValue(),'100.00');await page.getByRole('button',{name:'Close',exact:true}).click();
+  await page.getByRole('button',{name:'Increase quantity Premium Rice'}).click();assert.equal(await page.locator('[data-qty="11"]').inputValue(),'2');await page.getByRole('button',{name:'Decrease quantity Premium Rice'}).click();assert.equal(await page.locator('[data-qty="11"]').inputValue(),'1');
+  await page.locator('[data-calc="7"]').click();await page.locator('[data-calc="×"]').click();await page.locator('[data-calc="8"]').click();await page.locator('[data-calc="="]').click();assert.equal(await page.locator('#calculator-display').textContent(),'56');
+  await page.locator('[data-apply-discount="11"]').click();await page.locator('#discount-form input[name=value]').fill('5.00');await page.locator('#discount-form button').click();await page.locator('#message-close').click();assert.equal(s.meta('cart')[0].discount_minor,500);
+  await page.getByRole('button',{name:'Take payment'}).click();await page.getByRole('heading',{name:/Take payment/}).waitFor();assert.equal(await page.locator('#payment-form input[name=received]').inputValue(),'95.00');await page.getByRole('button',{name:'Close',exact:true}).click();
   await page.locator('[data-tab="till"]').click();await page.getByRole('heading',{name:'Cash movements & closing'}).waitFor();
   await page.locator('[data-tab="sell"]').click();assert.equal(await page.locator('[data-qty="11"]').inputValue(),'1');
   await page.locator('#search').fill('Coffee');assert.equal(await page.locator('.product').count(),1);await page.locator('#search').fill('');

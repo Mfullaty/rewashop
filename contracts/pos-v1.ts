@@ -106,7 +106,10 @@ export interface OnlineSaleLine {
   tax_minor?: Minor;
   total_minor?: Minor;
 }
+export interface ReceiptProof { key_id: string; payload: string; signature: string }
 export interface OnlineSale {
+  verification_token?: string;
+  receipt_proof?: ReceiptProof;
   schema_version?: 1;
   client_sale_id: UUID;
   register_id: number;

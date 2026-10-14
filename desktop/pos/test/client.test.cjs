@@ -87,3 +87,9 @@ test('legacy reservation cleanup cannot wedge sync after inventory permission is
  const network=f.client.transport;let denied=0;f.client.transport=async(url,o)=>{if(url.endsWith('/inventory/allocations/reconcile')){denied++;const e=Error('No longer permitted');e.status=403;e.code='PERMISSION_DENIED';throw e;}return network(url,o);};
  f.client.openShift(0);const result=await f.client.sync();assert.equal(f.store.events(true).length,0);assert.equal(f.client.unresolved().length,1);assert.equal(result.syncSummary.waiting,1);await f.client.sync();assert.equal(f.client.unresolved().length,1);assert.equal(denied,2);assert.ok(f.store.meta('last_sync'));
 });
+test('checkout lock delays catalog changes without delaying event upload',async t=>{
+ const f=fixture(t);f.client.openShift(0);await f.sale(1);f.store.set('checkout_lock',true);const before=f.store.get('catalog',11);await f.client.sync();assert.equal(f.store.events(true).length,0);assert.deepEqual(f.store.get('catalog',11),before);assert.equal(f.store.meta('catalog_applied_sales'),null);f.store.set('checkout_lock',false);await f.client.refreshCatalog();assert.ok(f.store.meta('catalog_applied_sales').length);
+});
+test('receipt private keys never enter backup exports or renderer state',t=>{
+ const f=fixture(t);f.store.set('receipt_private_key','sensitive-private-key');f.store.set('receipt_public_key','public');f.store.set('receipt_signing_key',{key_id:'key'});assert.equal(f.store.export().records.some(row=>row.id==='receipt_private_key'),false);assert.ok(!JSON.stringify(f.client.state()).includes('sensitive-private-key'));
+});

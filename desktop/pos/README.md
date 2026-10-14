@@ -20,3 +20,5 @@ The app stores its database in Electron's `userData` folder. Keep this folder du
 The default cashier is the enrolled device user; there is no unauthenticated cross-cashier switching. Online management opens the existing store dashboard. Offline cash sales use the downloaded catalog and signed prices; no reservation or manual shift setup is required. External tenders, settlement evidence and administrative writes require a connection.
 
 For the real backend integration test, initialize `tests/Support/create-pos-desktop-fixture.php`, start the loopback-only `pos-desktop-router.php` on port 8124, and run `npm run test:integration`. These fixtures must never be deployed.
+
+Version 1.2: clean thermal receipts with immediately verifiable device-signed QR codes, automatic synchronization, separate quantity buttons, amount/percentage discounts and a checkout calculator. See [the upgrade guide](../../docs/pos/desktop-upgrade-1.2.md).

@@ -81,6 +81,9 @@ def schema_for(rules):
 
 
 descriptions = {
+    '__invoke': 'Verify a stored receipt through its private bearer QR token.',
+    'signed': 'Verify a device-signed receipt immediately, without any sale upload.',
+    'receiptKey': 'Enroll the approved computer public key used for offline receipt signatures.',
     'health': 'Public process health and API schema version.',
     'capabilities': 'Supported features and current caller permissions.',
     'bootstrap': 'Scoped store, register, cashier, currency, policy public key and sync metadata.',
@@ -133,9 +136,9 @@ schemas = {
     'OfflineSalePayload': schema_for({}),
 }
 paths = {}
-unauthenticated = {'health', 'pairStart', 'pairConfirm'}
+unauthenticated = {'health', 'pairStart', 'pairConfirm', '__invoke', 'signed'}
 created = {'sale', 'shiftOpen', 'refund', 'allocate', 'pairStart', 'registerCreate'}
-not_idempotent = {'pairStart', 'pairConfirm', 'push'}
+not_idempotent = {'pairStart', 'pairConfirm', 'push', 'receiptKey'}
 for route in routes:
     action = route['action']
     body_schema = schema_for(route['rules'])
@@ -156,6 +159,12 @@ for route in routes:
         if '{id}' in uri:
             operation['parameters'].append({'name': 'id', 'in': 'path', 'required': True,
                 'schema': {'type': 'string', 'format': 'uuid'} if action == 'revoke' else {'type': 'integer', 'minimum': 1}})
+        if '{token}' in uri or '{key}' in uri:
+            name = 'token' if '{token}' in uri else 'key'
+            operation['parameters'].append({'name': name, 'in': 'path', 'required': True, 'schema': {'type': 'string', 'pattern': '^[A-Za-z0-9_-]{43}$' if name == 'token' else '^[a-f0-9]{32}$'}})
+        if action == 'signed':
+            for name, limit in [('p', 6000), ('s', 86)]:
+                operation['parameters'].append({'name': name, 'in': 'query', 'required': True, 'schema': {'type': 'string', 'maxLength': limit}})
         if method == 'GET':
             for key, prop in body_schema['properties'].items():
                 operation['parameters'].append({'name': key, 'in': 'query', 'required': key in body_schema.get('required', []),

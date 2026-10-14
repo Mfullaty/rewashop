@@ -1,4 +1,6 @@
-# RewaShop POS 1.1: installation and daily use
+# RewaShop POS: installation and daily use
+
+For the current 1.2 release, deploy the website migrations and follow [the 1.2 upgrade guide](desktop-upgrade-1.2.md). This adds immediate signed receipt verification, automatic sync, discounts, separate quantity buttons and a checkout calculator. The first-install and recovery instructions below still apply.
 
 ## Sellers
 
@@ -6,7 +8,7 @@ RewaShop staff gives you the Windows portable program or installs its desktop sh
 
 1. RewaShop staff connects the computer to your shop once. Products and pictures download automatically.
 2. Click **Disconnect** whenever you want to work offline. Cash sales save immediately on this computer. Opening cash in **My till** is optional; your first sale opens a zero-opening session automatically.
-3. Click **Connect & sync** when ready. Saved sales upload, and products, prices, pictures and stock download again. When connected already, click **Sync now**.
+3. Click **Connect & sync** when ready. Saved sales upload, and products, prices, pictures and stock download again. Version 1.2 keeps syncing automatically while connected. **Sync now** retries immediately; automatic sync can be switched off in Settings.
 4. You do not set aside or reserve stock. **Downloaded products** shows the catalog available here.
 5. Read the popup after an action. If a connection fails, your saved sales stay on this computer. Retry when internet returns. Do not repeat a payment waiting for online confirmation.
 6. Save an encrypted backup in **Settings & backup** regularly. Keep the backup outside this computer.
