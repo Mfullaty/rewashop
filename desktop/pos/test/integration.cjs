@@ -26,6 +26,7 @@ const {Store}=require('../src/store.cjs'),{Client}=require('../src/client.cjs');
   assert.equal(store.list('allocation').filter(a=>a.status==='open').length,0);assert.equal(store.meta('spent_minor'),0);
   const report=await client.report();assert.equal(report.totals.sales,2);assert.equal(report.totals.net_minor,32250);assert.equal(report.totals.net_tax_minor,2250);
   assert.equal(store.get('catalog',22).available_quantity,16);
+  await client.fullCatalogSync();assert.equal(store.list('catalog').length,1);assert.equal(store.get('catalog',22).available_quantity,16);assert.equal(store.list('sale').length,2);
   console.log('Real Laravel integration passed: downloaded catalog without reservations, auto till, disconnect, tax, lost response, replay, partial return, till, close, report and reconciliation.');
  }finally{store.close();fs.rmSync(dir,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1});

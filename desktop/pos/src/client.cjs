@@ -185,17 +185,28 @@ class Client {
         catch(e) { if(e.status===403 && ['PERMISSION_DENIED','OFFLINE_DISABLED'].includes(e.code)) break; throw e; }
       }
     }
-    if(options.refreshCatalog!==false) await this.refreshCatalog();
+    if(options.refreshCatalog!==false) await this.refreshCatalog({full:options.fullCatalog===true,resume:options.resumeCatalog===true});
     await this.refreshAllocations();
     this.s.set('restore_pending', false); this.s.set('last_sync', Date.now()); return {...this.state(), syncSummary: {uploaded: this.s.events().filter(e => success(e.ack)).length, waiting: this.s.events(true).length + this.s.reviews().length + this.unresolved().length}};
   }
-  async refreshCatalog() {
+  clearCatalog() {
+    if(this.s.meta('checkout_lock'))throw Error('Finish or close the payment window before clearing products.');
+    this.s.transaction(()=>{this.s.db.prepare("DELETE FROM records WHERE kind IN ('catalog','held')").run();this.s.set('cart',[]);this.s.set('cursor_ready',false);this.s.set('catalog_paused',true);});
+    return this.state();
+  }
+  async fullCatalogSync() {
+    if(this.s.meta('checkout_lock'))throw Error('Finish or close the payment window before refreshing products.');
+    if(this.s.meta('manual_offline'))throw Error('Click Connect & sync first, then Refresh all products.');
+    return this.sync({fullCatalog:true,resumeCatalog:true});
+  }
+  async refreshCatalog({full=false,resume=false}={}) {
+    if(this.s.meta('catalog_paused')&&!resume&&!full)return;
     if(this.s.meta('checkout_lock'))return;
-    if (!this.s.meta('cursor_ready')) {
-      let page = await this.api('catalog/snapshot?limit=500'); const items = [...page.data], high = page.high_water_mark;
+    if (full || this.s.meta('catalog_paused') || !this.s.meta('cursor_ready')) {
+      let page = await this.api('catalog/snapshot?limit=500'+(full||this.s.meta('catalog_paused')?'&fresh=1':'')); const items = [...page.data], high = page.high_water_mark;
       while (page.has_more) { page = await this.api(`catalog/snapshot?limit=500&snapshot_id=${page.snapshot_id}&after=${page.next_after}`); items.push(...page.data); }
       if(this.s.meta('checkout_lock'))return;
-      this.s.transaction(() => { this.s.set('last_catalog_snapshot',Date.now()); this.s.db.prepare("DELETE FROM records WHERE kind='catalog'").run(); for (const item of items) this.s.put('catalog', item.stock_id, item); this.s.set('cursor', high); this.s.set('cursor_ready', true); });
+      this.s.transaction(() => { this.s.set('last_catalog_snapshot',Date.now()); this.s.db.prepare("DELETE FROM records WHERE kind='catalog'").run(); for (const item of items) this.s.put('catalog', item.stock_id, item); this.s.set('cursor', high); this.s.set('cursor_ready', true);this.s.set('catalog_paused',false); });
     }
     let page;
     do {
@@ -210,6 +221,8 @@ class Client {
       });
     } while (page.has_more);
     this.s.set('catalog_applied_sales',this.s.list('sale').filter(s=>s.sync_status==='accepted').map(s=>s.client_sale_id));
+    const ids=new Set(this.s.list('catalog').map(i=>i.stock_id));
+    this.s.transaction(()=>{this.s.set('cart',this.s.meta('cart',[]).filter(l=>ids.has(l.stock_id)));for(const held of this.s.list('held')){held.cart=held.cart.filter(l=>ids.has(l.stock_id));if(held.cart.length)this.s.put('held',held.id,held);else this.s.remove('held',held.id);}});
   }
   async refreshAllocations() {
     if (!this.boot().abilities.includes('pos:inventory:read')) return;
@@ -256,7 +269,7 @@ class Client {
     return this.s.meta('shift');
   }
   disconnect() { this.s.set('manual_offline', true); return this.state(); }
-  async connect() { this.s.set('manual_offline', false); return this.sync(); }
+  async connect() { this.s.set('manual_offline', false); return this.sync({resumeCatalog:true}); }
   allocation(stockId, quantity) {
     const b = this.boot();
     return this.s.list('allocation').find(a => {
@@ -434,7 +447,7 @@ class Client {
   async report(from, to) { this.require('report:read'); const data = await this.api('reports/summary?' + new URLSearchParams({...(from ? {from} : {}), ...(to ? {to} : {})})); this.s.set('report', data); return data; }
   state() {
     const boot = this.s.meta('boot'), used = this.localStockUse();
-    return {autoSync:this.s.meta('auto_sync',true),autoSyncStatus:this.s.meta('auto_sync_status',{}),manualOffline: !!this.s.meta('manual_offline'), paired: !!this.s.meta('credential'), origin: this.s.meta('origin', 'https://rewashop.com'), boot, shift: this.s.meta('shift'), catalog: this.s.list('catalog').map(item => ({...item, local_quantity: this.available(item.stock_id, used), image_src: item.image_url && this.s.get('photo', createHash('sha256').update(item.image_url).digest('hex')) ? 'pos-image://cache/' + createHash('sha256').update(item.image_url).digest('hex') : null})), allocations: this.s.list('allocation'), sales: this.s.list('sale').reverse(), returns: this.s.list('return'), events: this.s.events().map(e => ({...e, review_resolved: !!this.s.get('resolved', e.event_id)})), pendingRequests: this.unresolved().map(r => ({id: r.id, path: r.path})), requestFailures: this.s.db.prepare('SELECT id,path,response FROM requests WHERE response IS NOT NULL').all().map(r => ({id:r.id,path:r.path,...JSON.parse(r.response)})).filter(r => r.rejected), blocked: this.s.meta('blocked'), transferLocked: this.s.meta('transfer_locked'), cart: this.s.meta('cart', []), held: this.s.list('held'), lastSync: this.s.meta('last_sync'), remoteSales: this.s.meta('remote_sales'), report: this.s.meta('report'), pairing: this.s.meta('pairing') ? {pairing_id: this.s.meta('pairing').pairing_id, expires_at: this.s.meta('pairing').expires_at, recovery_device_id: boot?.device_id} : null};
+    return {catalogPaused:!!this.s.meta('catalog_paused'),autoSync:this.s.meta('auto_sync',true),autoSyncStatus:this.s.meta('auto_sync_status',{}),manualOffline: !!this.s.meta('manual_offline'), paired: !!this.s.meta('credential'), origin: this.s.meta('origin', 'https://rewashop.com'), boot, shift: this.s.meta('shift'), catalog: this.s.list('catalog').map(item => ({...item, local_quantity: this.available(item.stock_id, used), image_src: item.image_url && this.s.get('photo', createHash('sha256').update(item.image_url).digest('hex')) ? 'pos-image://cache/' + createHash('sha256').update(item.image_url).digest('hex') : null})), allocations: this.s.list('allocation'), sales: this.s.list('sale').reverse(), returns: this.s.list('return'), events: this.s.events().map(e => ({...e, review_resolved: !!this.s.get('resolved', e.event_id)})), pendingRequests: this.unresolved().map(r => ({id: r.id, path: r.path})), requestFailures: this.s.db.prepare('SELECT id,path,response FROM requests WHERE response IS NOT NULL').all().map(r => ({id:r.id,path:r.path,...JSON.parse(r.response)})).filter(r => r.rejected), blocked: this.s.meta('blocked'), transferLocked: this.s.meta('transfer_locked'), cart: this.s.meta('cart', []), held: this.s.list('held'), lastSync: this.s.meta('last_sync'), remoteSales: this.s.meta('remote_sales'), report: this.s.meta('report'), pairing: this.s.meta('pairing') ? {pairing_id: this.s.meta('pairing').pairing_id, expires_at: this.s.meta('pairing').expires_at, recovery_device_id: boot?.device_id} : null};
   }
 }
 module.exports = {Client, success};

@@ -84,15 +84,38 @@ class CatalogService
             ->each(fn ($id) => $this->stock((int) $id));
     }
 
-    public function snapshot(PosContext $context, ?string $snapshotId, int $after, int $limit): array
+    private function pruneUnavailable(PosContext $context): void
+    {
+        $ids = DB::table('pos_catalog_entries as e')->leftJoin('product_stocks as s','s.id','=','e.stock_id')
+            ->leftJoin('products as p','p.id','=','s.product_id')->where('e.seller_id',$context->sellerId)
+            ->where(function ($q) use ($context) {
+                $q->whereNull('s.id')->orWhereNull('p.id')->orWhere('p.published',false)->orWhere('p.approved',false)
+                    ->orWhere('p.pos_excluded',true)->orWhere('p.digital',true)->orWhere('p.auction_product',true);
+                if ($context->ownerType === 'admin') { $q->orWhere('p.added_by','!=','admin'); }
+                else { $q->orWhere('p.added_by','!=','seller')->orWhere('p.user_id','!=',$context->sellerId); }
+            })->orderBy('e.stock_id')->pluck('e.stock_id');
+        foreach ($ids as $id) { $this->stock((int)$id); }
+    }
+
+    private function rebuildStore(PosContext $context): void
+    {
+        $live = DB::table('product_stocks as s')->join('products as p','p.id','=','s.product_id');
+        if ($context->ownerType === 'admin') { $live->where('p.added_by','admin'); }
+        else { $live->where('p.added_by','seller')->where('p.user_id',$context->sellerId); }
+        $ids = $live->pluck('s.id')->merge(DB::table('pos_catalog_entries')->where('seller_id',$context->sellerId)->pluck('stock_id'))->unique()->sort();
+        foreach ($ids as $id) { $this->stock((int)$id); }
+    }
+
+    public function snapshot(PosContext $context, ?string $snapshotId, int $after, int $limit, bool $fresh = false): array
     {
         $context->require('pos:catalog:read');
         if (!$snapshotId) {
-            $snapshotId = app(TransactionService::class)->run($context, function () use ($context) {
+            $snapshotId = app(TransactionService::class)->run($context, function () use ($context, $fresh) {
+                if ($fresh) { $this->rebuildStore($context); }
                 $existing = DB::table('pos_catalog_snapshots')->where('seller_id', $context->sellerId)
                     ->where('device_id', $context->device?->id)->where('actor_id', $context->actor->id)
                     ->where('expires_at', '>', now('UTC'))->orderByDesc('created_at')->first();
-                if ($existing) { return $existing->id; }
+                if ($existing && !$fresh) { return $existing->id; }
                 $id = (string) Str::uuid();
                 $head = (int) DB::table('pos_settings')->where('seller_id', $context->sellerId)->value('change_sequence');
                 DB::table('pos_catalog_snapshots')->insert([
@@ -123,6 +146,7 @@ class CatalogService
     public function changes(PosContext $context, int $cursor, int $limit, bool $catalogOnly = true): array
     {
         $context->require($catalogOnly ? 'pos:catalog:read' : 'pos:sync');
+        $this->pruneUnavailable($context);
         $head = (int) DB::table('pos_settings')->where('seller_id', $context->sellerId)->value('change_sequence');
         if ($cursor > $head) {
             throw new PosException('INVALID_CURSOR', 'The cursor is ahead of this merchant feed.', 409);

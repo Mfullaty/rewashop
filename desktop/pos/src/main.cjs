@@ -53,7 +53,9 @@ async function execute(command, data = {}) {
     case 'state': return client.state();
     case 'pairStart': return client.pairStart(data.origin, data.name);
     case 'pairConfirm': return client.pairConfirm();
-    case 'sync': return client.sync();
+    case 'sync': return client.sync({resumeCatalog:true});
+    case 'fullCatalogSync': return client.fullCatalogSync();
+    case 'clearCatalog': {const state=client.clearCatalog();await images.cache([]);return state;}
     case 'disconnect': {const state=client.disconnect();cancelRequests();return state;}
     case 'connect': return client.connect();
     case 'quote': {const quote=client.quote(data.cart,data.mode);if(data.payment)store.set('checkout_lock',true);return quote;}
@@ -159,7 +161,7 @@ app.whenReady().then(() => {
     if (typeof command !== 'string' || JSON.stringify(data || {}).length > 1048576) throw Error('Invalid request.');
     const local=['state','quote','checkoutLock','wakeSync','setAutoSync','saveCart','hold','resume','disconnect','print','openShift','closeShift','cash'].includes(command)||(command==='checkout'&&data?.mode==='offline');
     foreground++;
-    const executeTask=async()=>{const result=await execute(command,data);if(['sync','pairConfirm','connect'].includes(command)&&!store.meta('manual_offline')){await Promise.all([cacheBrandLogo(),images.cache(store.list('catalog')).catch(()=>{})]);return {...result,...client.state()};}return result;};
+    const executeTask=async()=>{const result=await execute(command,data);if(['sync','fullCatalogSync','pairConfirm','connect'].includes(command)&&!store.meta('manual_offline')){await Promise.all([cacheBrandLogo(),images.cache(store.list('catalog')).catch(()=>{})]);return {...result,...client.state()};}return result;};
     const task=(background&&local?localSerial:serial).then(executeTask);
     if(background&&local)localSerial=task.catch(()=>{});else serial=task.catch(()=>{});
     task.finally(()=>{foreground--;if(['checkout','openShift','closeShift','cash','refund','pairConfirm','connect'].includes(command))autoSync?.kick();}).catch(()=>{});

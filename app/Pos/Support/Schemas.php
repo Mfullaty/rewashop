@@ -126,7 +126,7 @@ final class Schemas
                 'category_id' => 'sometimes|integer|min:1', 'brand_id' => 'sometimes|integer|min:1',
                 'stock_id' => 'sometimes|integer|min:1',
                 'after' => 'sometimes|integer|min:0', 'limit' => 'sometimes|integer|min:1|max:200'],
-            'snapshot' => ['snapshot_id' => 'sometimes|uuid', 'after' => 'sometimes|integer|min:0', 'limit' => 'sometimes|integer|min:1|max:2000'],
+            'snapshot' => ['fresh' => 'sometimes|boolean', 'snapshot_id' => 'sometimes|uuid', 'after' => 'sometimes|integer|min:0', 'limit' => 'sometimes|integer|min:1|max:2000'],
             'changes', 'pull' => ['cursor' => 'sometimes|integer|min:0', 'limit' => 'sometimes|integer|min:1|max:2000'],
             'sales', 'report' => ['from' => 'sometimes|date', 'to' => 'sometimes|date|after_or_equal:from',
                 'register_id' => 'sometimes|integer|min:1', 'page' => 'sometimes|integer|min:1'],

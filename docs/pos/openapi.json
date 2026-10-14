@@ -1475,6 +1475,16 @@
         },
         "parameters": [
           {
+            "name": "fresh",
+            "in": "query",
+            "required": false,
+            "style": "form",
+            "explode": true,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
             "name": "snapshot_id",
             "in": "query",
             "required": false,
@@ -5976,6 +5986,16 @@
         },
         "parameters": [
           {
+            "name": "fresh",
+            "in": "query",
+            "required": false,
+            "style": "form",
+            "explode": true,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
             "name": "snapshot_id",
             "in": "query",
             "required": false,
@@ -10315,6 +10335,9 @@
       "SnapshotRequest": {
         "type": "object",
         "properties": {
+          "fresh": {
+            "type": "boolean"
+          },
           "snapshot_id": {
             "type": "string",
             "format": "uuid"

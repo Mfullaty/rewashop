@@ -116,7 +116,7 @@ class PosController extends Controller
         return response()->json(['data' => $result, 'has_more' => $more, 'next_after' => $ids->last() ?? (int) ($data['after'] ?? 0)]);
     }
 
-    public function snapshot(PosRequest $r) { $d = $r->validated(); return response()->json(app(CatalogService::class)->snapshot($this->context($r), $d['snapshot_id'] ?? null, (int) ($d['after'] ?? 0), (int) ($d['limit'] ?? 500))); }
+    public function snapshot(PosRequest $r) { $d = $r->validated(); return response()->json(app(CatalogService::class)->snapshot($this->context($r), $d['snapshot_id'] ?? null, (int) ($d['after'] ?? 0), (int) ($d['limit'] ?? 500), (bool) ($d['fresh'] ?? false))); }
     public function changes(PosRequest $r) { $d = $r->validated(); return response()->json(app(CatalogService::class)->changes($this->context($r), (int) ($d['cursor'] ?? 0), (int) ($d['limit'] ?? 500))); }
     public function pull(PosRequest $r) { $d = $r->validated(); return response()->json(app(CatalogService::class)->changes($this->context($r), (int) ($d['cursor'] ?? 0), (int) ($d['limit'] ?? 500), false)); }
     public function pairStart(PosRequest $r) { return response()->json(app(PairingService::class)->start($r->validated()), 201); }

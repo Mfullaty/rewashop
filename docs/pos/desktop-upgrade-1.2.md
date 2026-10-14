@@ -1,4 +1,4 @@
-# RewaShop desktop POS 1.2
+# RewaShop desktop POS 1.2.1
 
 ## Staff: deploy the website update first
 
@@ -15,7 +15,7 @@ php artisan pos:doctor
 
 The earlier POS 1.1 migrations must already be installed. The new migrations add a private receipt lookup hash and registered receipt public keys. Keep the website's `APP_URL` set to its correct HTTPS origin.
 
-Close the old desktop, keep its Windows application-data folder, and replace the portable EXE or run the new installer. Open the updated program while connected once. Automatic sync enrolls this approved computer's receipt public key. The cashier has no extra signing form or per-receipt setup. The private key stays protected by Windows credential storage.
+Download the Windows artifact from the PR build. Close the old desktop, keep its Windows application-data folder, and replace the portable EXE or run the new installer. Open the updated program while connected once. Automatic sync enrolls this approved computer's receipt public key. The cashier has no extra signing form or per-receipt setup. The private key stays protected by Windows credential storage.
 
 ## Sellers: everyday use
 
@@ -44,3 +44,14 @@ Configure the printer's actual 58/80 mm paper and driver. Printing requests the 
 Encrypted backups preserve signed receipt URLs and the complete sales journal, but omit credentials and receipt private keys. Moving computers still requires recovery of the original approved device. The recovered installation enrolls a fresh key. Historical signed receipts already accepted with an immutable sale remain verifiable after device revocation, including their current refund/void state. Revocation prevents unrecorded or newly altered proofs from being accepted.
 
 Verification pages reveal no customer contact information, cashier identity, internal IDs or private signing keys. They are rate limited and carry no-cache/no-referrer/no-index headers. Altered proof data, unknown signing keys, invalid signatures and revoked devices are not verified.
+
+## Product cleanup and full refresh (1.2.1)
+
+In **Downloaded products** or **Settings & backup**:
+
+- **Refresh all products** uploads saved operations, rebuilds this store's catalog from current online products, and replaces the download after every page arrives. Deleted products are removed. Internet is required; if manually disconnected, click Connect & sync first.
+- **Clear downloaded products** removes products, product pictures and unpaid carts from this computer after a confirmation dialog. Sales, receipts, payments, device approval and the full sync journal remain. Product downloads pause until Sync now, Connect & sync or Refresh all products; automatic financial uploads continue.
+
+Normal sync now detects deleted or delisted online products even when an import or bulk database deletion skipped model events. Full refresh creates a new snapshot rather than reusing an older one, and also reconciles products added or edited outside the normal model hooks. Existing paginated snapshots remain immutable. A failed refresh preserves the previous download.
+
+Deploy the updated CatalogService, PosController, Schemas and API contract as part of the website ZIP before using Windows 1.2.1. There are no additional migrations beyond the two receipt migrations above.
