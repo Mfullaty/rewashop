@@ -43,12 +43,11 @@ class ProductBulkUploadController extends Controller
 
     public function bulk_upload(Request $request)
     {
-        if($request->hasFile('bulk_file')){
-            $import = new ProductsImport;
-            Excel::import($import, request()->file('bulk_file'));
-        }
-        
+        if (Auth::user()->user_type === 'seller' && !Auth::user()->shop?->verification_status) { abort(403,'Your shop must be verified before importing products.'); }
+        $request->validate(['bulk_file'=>'required|file|mimes:csv,txt,xlsx,xls|max:20480','date_format'=>'nullable|in:iso,legacy']);
+        $import = new ProductsImport($request->input('date_format','iso') === 'legacy');
+        try { Excel::import($import,$request->file('bulk_file')); }
+        catch (\Throwable $e) { report($e);flash('The product file could not be read. Use a CSV, XLSX or XLS file with the template headings.')->error(); }
         return back();
     }
-
 }

@@ -12,7 +12,7 @@ class CategoryBulkUploadController extends Controller
 {
     public function __construct()
     {
-        $this->middleware(['permission:category_bulk_upload'])->only('index');
+        $this->middleware(['permission:category_bulk_upload'])->only(['index','bulk_upload','download_demo']);
     }
 
     public function index()
@@ -37,11 +37,11 @@ class CategoryBulkUploadController extends Controller
             return back();
         }
 
+        $request->validate(['bulk_file'=>'required|file|mimes:csv,txt,xlsx,xls|max:20480']);
         if ($request->hasFile('bulk_file')) {
             $import = new CategoryBulkUpload;
-            Excel::import($import, $request->file('bulk_file'));
-
-            flash(translate('Categories imported successfully'))->success();
+            try{Excel::import($import,$request->file('bulk_file'));if($import->skipped)flash($import->imported.' categories imported; '.$import->skipped.' rows need correction.')->warning();elseif($import->imported)flash($import->imported.' categories imported successfully.')->success();else flash('No category rows were found in the first sheet.')->warning();}
+            catch(\Throwable $e){report($e);flash('The category file could not be read. Use a CSV, XLSX or XLS template.')->error();}
         }
 
         return back();
