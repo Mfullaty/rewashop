@@ -41,6 +41,6 @@ Configure the printer's actual 58/80 mm paper and driver. Printing requests the 
 
 ## Recovery and controls
 
-Encrypted backups preserve signed receipt URLs and the complete sales journal, but omit credentials and receipt private keys. Moving computers still requires recovery of the original approved device. The recovered installation enrolls a fresh key; existing registered keys continue to verify historical receipts while the device remains approved. Revoking the device also prevents its signed QR proofs from being accepted.
+Encrypted backups preserve signed receipt URLs and the complete sales journal, but omit credentials and receipt private keys. Moving computers still requires recovery of the original approved device. The recovered installation enrolls a fresh key. Historical signed receipts already accepted with an immutable sale remain verifiable after device revocation, including their current refund/void state. Revocation prevents unrecorded or newly altered proofs from being accepted.
 
 Verification pages reveal no customer contact information, cashier identity, internal IDs or private signing keys. They are rate limited and carry no-cache/no-referrer/no-index headers. Altered proof data, unknown signing keys, invalid signatures and revoked devices are not verified.

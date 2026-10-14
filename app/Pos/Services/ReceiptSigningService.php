@@ -21,7 +21,7 @@ class ReceiptSigningService
  public function verify(string $keyId,string $packed,string $signature):?array {
   if(!preg_match('/^[a-f0-9]{32}$/D',$keyId)||strlen($packed)>6000||strlen($signature)!==86)return null;
   $key=DB::table('pos_receipt_keys')->where('id',$keyId)->first();if(!$key)return null;
-  $device=DB::table('pos_devices')->where('id',$key->device_id)->where('seller_id',$key->seller_id)->first();if(!$device||$device->revoked_at)return null;
+  $device=DB::table('pos_devices')->where('id',$key->device_id)->where('seller_id',$key->seller_id)->first();
   $binary=$this->decode($packed);$sig=$this->decode($signature);if($binary===false||$sig===false||strlen($sig)!==64)return null;
   $json=@gzinflate($binary,8192);if($json===false)return null;
   try{$p=json_decode($json,true,16,JSON_THROW_ON_ERROR);}catch(\Throwable){return null;}
@@ -32,6 +32,15 @@ class ReceiptSigningService
     !is_string($p[7])||strlen($p[7])>1000||!is_string($p[8])||strlen($p[8])>3000||
     !is_int($p[9])||!is_int($p[10])||$p[9]<0||$p[10]<0||$p[9]+$p[10]!==$p[4])return null;
   if(!sodium_crypto_sign_verify_detached($sig,Payload::canonical($p),base64_decode($key->public_key,true)))return null;
+  if(!$device||$device->revoked_at) {
+   // Revocation blocks unrecorded proofs. A signature already accepted with
+   // an immutable sale remains valid, including its current refund/void state.
+   $receipt=DB::table('pos_receipts')->where('seller_id',$key->seller_id)->where('verification_hash',hash('sha256',$p[1]))->first();
+   if(!$receipt)return null;
+   $stored=json_decode($receipt->payload,true,512,JSON_THROW_ON_ERROR);
+   $url=parse_url($stored['verification_url']??'');$query=[];parse_str($url['query']??'',$query);
+   if(($url['path']??'')!=='/api/pos/v1/receipts/check/'.$keyId||($query['p']??null)!==$packed||($query['s']??null)!==$signature)return null;
+  }
   return ['claims'=>$p,'seller_id'=>(int)$key->seller_id,'device_id'=>$key->device_id];
  }
  public function url(array $proof):string {return rtrim(config('app.url'),'/').'/api/pos/v1/receipts/check/'.$proof['key_id'].'?'.http_build_query(['p'=>$proof['payload'],'s'=>$proof['signature']]);}
