@@ -18,6 +18,7 @@ class PosServiceProvider extends ServiceProvider
 {
     public function boot(): void
     {
+        RateLimiter::for('pos-receipt-verification', fn(Request $r) => Limit::perMinute(60)->by($r->ip()));
         RateLimiter::for('pos-pair', fn (Request $r) => Limit::perMinute(10)->by($r->ip()));
         RateLimiter::for('pos', fn (Request $r) => Limit::perMinute(240)->by(
             $r->attributes->get('pos_context')?->device?->id ?? $r->user()?->id ?? $r->ip()));

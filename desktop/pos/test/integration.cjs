@@ -11,6 +11,7 @@ const {Store}=require('../src/store.cjs'),{Client}=require('../src/client.cjs');
   await client.sync();assert.equal(store.list('catalog').length,1);assert.equal(store.list('catalog')[0].stock_id,22);
   client.disconnect();const id=randomUUID();
   const receipt=await client.checkout({mode:'offline',client_sale_id:id,cart:[{stock_id:22,quantity:3}],tenders:[{method:'cash',currency:'NGN',amount_minor:32250,received_minor:40000,change_minor:7750}]});assert.equal(receipt.total_minor,32250);
+  const immediate=await fetch(receipt.verification_url,{headers:{Accept:'application/json'}});assert.equal(immediate.status,200);const proof=await immediate.json();assert.equal(proof.verified,true);assert.equal(proof.total_minor,32250);assert.equal(proof.lines.length,0);assert.ok(!JSON.stringify(proof).includes('client_sale_id'));
   assert.equal(store.list('allocation').length,0);assert.equal(client.available(22),17);store.set('manual_offline',false);lose=true;await assert.rejects(()=>client.sync(),/Dropped/);await client.sync();await client.sync();assert.equal(store.events(true).length,0);assert.equal(store.list('sale')[0].sync_status,'accepted',JSON.stringify(store.events()));assert.equal(store.meta('spent_minor'),0);
   const sale=store.get('sale',id),detail=await client.saleDetail(sale.server.sale_id);assert.equal(detail.sale.total_minor,32250);assert.equal(detail.lines[0].quantity,3);
   assert.equal(client.available(22),17);
@@ -25,6 +26,7 @@ const {Store}=require('../src/store.cjs'),{Client}=require('../src/client.cjs');
   assert.equal(store.list('allocation').filter(a=>a.status==='open').length,0);assert.equal(store.meta('spent_minor'),0);
   const report=await client.report();assert.equal(report.totals.sales,2);assert.equal(report.totals.net_minor,32250);assert.equal(report.totals.net_tax_minor,2250);
   assert.equal(store.get('catalog',22).available_quantity,16);
+  await client.fullCatalogSync();assert.equal(store.list('catalog').length,1);assert.equal(store.get('catalog',22).available_quantity,16);assert.equal(store.list('sale').length,2);
   console.log('Real Laravel integration passed: downloaded catalog without reservations, auto till, disconnect, tax, lost response, replay, partial return, till, close, report and reconciliation.');
  }finally{store.close();fs.rmSync(dir,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1});

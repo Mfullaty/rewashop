@@ -1,6 +1,9 @@
 @extends('backend.layouts.app')
 
 @section('content')
+@if(session('category_import_result'))<div class="alert alert-info"><strong>{{ session('category_import_result.imported',0) }} categories imported. {{ session('category_import_result.skipped',0) }} rows need correction.</strong>@foreach(session('category_import_result.errors',[]) as $error)<p>{{ $error }}</p>@endforeach</div>@endif
+@if($errors->any())<div class="alert alert-danger">@foreach($errors->all() as $error)<p>{{ $error }}</p>@endforeach</div>@endif
+
 
     <div class="card">
         <div class="card-header">

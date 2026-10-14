@@ -11,18 +11,31 @@ use Maatwebsite\Excel\Concerns\WithHeadingRow;
 
 use App\Traits\PreventDemoModeChanges;
 
-class CategoryBulkUpload implements ToCollection, WithHeadingRow
+class CategoryBulkUpload implements ToCollection, WithHeadingRow, \Maatwebsite\Excel\Concerns\WithMultipleSheets
 {
     use PreventDemoModeChanges;
 
+    public int $imported=0;
+    public int $skipped=0;
+    public array $errors=[];
+
+    public function sheets(): array { return [0=>$this]; }
+
     public function collection(Collection $rows)
     {
-        foreach ($rows as $row) {
+        foreach ($rows as $index => $row) {
 
             if (empty($row['name'])) {
                 continue;
             }
 
+            try {
+            $data=$row instanceof Collection?$row->all():(array)$row;
+            \Illuminate\Support\Facades\Validator::make($data,['name'=>'required|string|max:200','digital'=>'nullable|boolean','parent_category_id'=>'nullable|integer|min:0','ordering_number'=>'nullable|integer|min:0'])->validate();
+            $ids=array_filter(array_map('trim',explode(',',(string)($row['filtering_attribute_id']??''))));
+            foreach($ids as $id){if(!ctype_digit($id)||!\Illuminate\Support\Facades\DB::table('attributes')->where('id',$id)->exists())throw \Illuminate\Validation\ValidationException::withMessages(['filtering_attribute_id'=>'Use existing numeric attribute IDs.']);}
+            if(!empty($row['parent_category_id'])&&!\Illuminate\Support\Facades\DB::table('categories')->where('id',$row['parent_category_id'])->exists())throw \Illuminate\Validation\ValidationException::withMessages(['parent_category_id'=>'Choose an existing parent category ID, or 0 for a top-level category.']);
+            \Illuminate\Support\Facades\DB::transaction(function()use($row){
             $category = new Category();
 
             $category->name = trim($row['name']);
@@ -62,7 +75,7 @@ class CategoryBulkUpload implements ToCollection, WithHeadingRow
             $category->save();
 
             $translation = CategoryTranslation::firstOrNew([
-                'lang' => env('DEFAULT_LANGUAGE'),
+                'lang' => env('DEFAULT_LANGUAGE','en'),
                 'category_id' => $category->id
             ]);
 
@@ -77,7 +90,11 @@ class CategoryBulkUpload implements ToCollection, WithHeadingRow
 
                 $category->attributes()->sync($attributeIds);
             }
+            });$this->imported++;
+            }catch(\Illuminate\Validation\ValidationException $e){$this->skipped++;if(count($this->errors)<50)$this->errors[]='Row '.($index+2).': '.implode(' ',\Illuminate\Support\Arr::flatten($e->errors()));}
+            catch(\Throwable $e){report($e);$this->skipped++;if(count($this->errors)<50)$this->errors[]='Row '.($index+2).': Could not save this category. Check its values or contact support.';}
         }
+        session()->flash('category_import_result',['imported'=>$this->imported,'skipped'=>$this->skipped,'errors'=>$this->errors]);
 
     }
 

@@ -152,16 +152,24 @@ class SalePostingService
                     'created_at' => now('UTC'), 'updated_at' => now('UTC')]);
             }
             $receiptNumber = $register->code.'-'.str_pad((string) $saleId, 10, '0', STR_PAD_LEFT);
-            $receipt = ['number' => $receiptNumber, 'client_sale_id' => $data['client_sale_id'],
+            $verification = app(ReceiptVerificationService::class);
+            $token = $data['verification_token'] ?? $verification->legacyToken($data['client_sale_id']);
+            $verificationUrl=$verification->url($token);
+            if(isset($data['receipt_proof'])) {
+                $proof=$data['receipt_proof'];$signing=app(ReceiptSigningService::class);$verified=$signing->verify($proof['key_id'],$proof['payload'],$proof['signature']);
+                if(!$verified||$verified['seller_id']!==$context->sellerId||$verified['device_id']!==$context->device?->id||$verified['claims'][1]!==$token||$verified['claims'][4]!==$total||$verified['claims'][3]!==$context->currency||$verified['claims'][2]!==$occurred->timestamp||$verified['claims'][6]!==count($lines)||$verified['claims'][9]!==array_sum(array_map(fn($t)=>$t['method']==='cash'?(int)$t['amount_minor']:0,$tenders))||!hash_equals($verified['claims'][5],Payload::hash(array_map(fn($l)=>[$l['snapshot']['name'],$l['snapshot']['variant']??'',(int)$l['quantity'],(int)$l['unit_price_minor'],(int)$l['discount_minor'],(int)$l['tax_minor'],(int)$l['total_minor']],$lines))))throw new PosException('INVALID_RECEIPT_PROOF','The receipt signature does not match this sale.',409);
+                $verificationUrl=$signing->url($proof);
+            }
+            $receipt = ['verification_url' => $verificationUrl, 'number' => $receiptNumber, 'client_sale_id' => $data['client_sale_id'],
                 'sale_id' => $saleId, 'order_id' => $orderId, 'order_code' => $orderCode,
-                'store' => app(StoreProvisioningService::class)->branding($context->sellerId, $context->ownerType),
+                'store' => isset($verified) ? array_replace(app(StoreProvisioningService::class)->branding($context->sellerId,$context->ownerType),['name'=>$verified['claims'][7],'address'=>$verified['claims'][8]]) : app(StoreProvisioningService::class)->branding($context->sellerId, $context->ownerType),
                 'register' => $register->code, 'cashier' => $context->actor->name, 'occurred_at' => $occurred->toIso8601String(),
                 'customer' => $customer ?: ['name' => 'Walk-in customer'], 'currency' => $context->currency,
                 'lines' => $lines, 'tenders' => $tenders, 'subtotal_minor' => $subtotal,
                 'discount_minor' => $discount, 'tax_minor' => $tax, 'total_minor' => $total,
                 'payment_status' => $pending ? 'pending' : 'settled'];
             DB::table('pos_receipts')->insert(['sale_id' => $saleId, 'seller_id' => $context->sellerId,
-                'number' => $receiptNumber, 'payload' => Payload::json($receipt), 'created_at' => now('UTC')]);
+                'verification_hash' => hash('sha256',$token), 'number' => $receiptNumber, 'payload' => Payload::json($receipt), 'created_at' => now('UTC')]);
             app(AuditService::class)->record($context, 'sale.post', (string) $saleId,
                 ['client_sale_id' => $data['client_sale_id'], 'order_id' => $orderId, 'source' => $context->device ? 'desktop' : 'web',
                     'inventory_mode' => $cached ? 'catalog' : ($offline ? 'reserved' : 'online')]);

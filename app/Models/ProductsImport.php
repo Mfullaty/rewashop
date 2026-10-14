@@ -18,6 +18,11 @@ class ProductsImport implements ToCollection, WithHeadingRow, WithMultipleSheets
 {
     use PreventDemoModeChanges;
 
+    public function __construct(private readonly bool $legacyDates = false) {}
+    public int $imported = 0;
+    public int $skipped = 0;
+    public array $errors = [];
+
     public function sheets(): array
     {
         return [
@@ -27,6 +32,9 @@ class ProductsImport implements ToCollection, WithHeadingRow, WithMultipleSheets
 
     public function collection(Collection $rows)
     {
+        if (env('DEMO_MODE') === 'On') { throw new \RuntimeException('Bulk import is disabled in demo mode.'); }
+        $normalizer = new \App\Import\ProductRow($this->legacyDates);
+        $rows=$rows->filter(fn($row)=>collect($row)->contains(fn($v)=>$v!==null&&trim((string)$v)!==''));
         $canImport = true;
         $user = Auth::user();
         if ($user->user_type == 'seller' && addon_is_activated('seller_subscription')) {
@@ -41,77 +49,20 @@ class ProductsImport implements ToCollection, WithHeadingRow, WithMultipleSheets
         }
 
         if ($canImport) {
-            foreach ($rows as $row) {
-
-                $requiredErrors = [];
-
-                if (empty($row['name'])) {
-                    $requiredErrors[] = 'Name is required.';
-                }
-                if (empty($row['unit_price']) || !is_numeric($row['unit_price'])) {
-                    $requiredErrors[] = 'Unit price is required and must be numeric.';
-                }
-                if (empty($row['main_category_id']) || !is_numeric($row['main_category_id'])) {
-                    $requiredErrors[] = 'Main Category ID is required and must be numeric.';
-                }
-                if (empty($row['unit_id']) || !is_numeric($row['unit_id'])) {
-                    $requiredErrors[] = 'Unit ID is required and must be numeric.';
-                }
-                if (!isset($row['stock']) || !is_numeric($row['stock'])) {
-                    $requiredErrors[] = 'Stock is required and must be numeric.';
+            foreach ($rows as $index => $row) {
+                if (collect($row)->every(fn($v) => $v === null || trim((string)$v) === '')) { continue; }
+                try { $row = $normalizer->normalize($row instanceof Collection ? $row->all() : (array)$row); }
+                catch (\Illuminate\Validation\ValidationException $e) {
+                    $this->skipped++; if(count($this->errors)<50)$this->errors[] = 'Row '.($index+2).': '.implode(' ',\Illuminate\Support\Arr::flatten($e->errors()));
+                    continue;
                 }
 
-                if (!empty($requiredErrors)) {
-                    flash(translate('Skipped row "' . ($row['name'] ?? 'unknown') . '": ' . implode(' ', $requiredErrors)))->error();
-                    continue; 
-                }
-
-                $optionalWarnings = [];
-
-                $brandId = $row['brand_id'] ?? null;
-                if (!empty($brandId) && !is_numeric($brandId)) {
-                    $optionalWarnings[] = 'Brand ID was invalid, skipped.';
-                    $brandId = null;
-                }
-
-                $discountType = $row['discount_type'] ?? null;
-                if (!empty($discountType) && !in_array($discountType, ['amount', 'percent'])) {
-                    $optionalWarnings[] = 'Discount type was invalid, skipped.';
-                    $discountType = null;
-                }
-
-                $stockVisibilityState = $row['stock_visibility_state'] ?? null;
-                if (!empty($stockVisibilityState) && !in_array($stockVisibilityState, ['hide', 'quantity', 'text'])) {
-                    $optionalWarnings[] = 'Stock Visibility State was invalid, skipped.';
-                    $stockVisibilityState = null;
-                }
-
-                $frequentlyBoughtSelectionType = $row['frequently_bought_selection_type'] ?? null;
-                if (!empty($frequentlyBoughtSelectionType) && !in_array($frequentlyBoughtSelectionType, ['product', 'category'])) {
-                    $optionalWarnings[] = 'Frequently Bought Selection Type was invalid, skipped.';
-                    $frequentlyBoughtSelectionType = null;
-                }
-
-                $shippingType = $row['shipping_type'] ?? null;
-                if (!empty($shippingType) && !in_array($shippingType, ['free', 'flat_rate'])) {
-                    $optionalWarnings[] = 'Shipping type was invalid, set to free.';
-                    $shippingType = 'free';
-                }
-
-                $boolFields = ['published', 'featured', 'todays_deal', 'refundable', 'show_refund_notes', 'has_warranty', 'show_warranty_note', 'is_product_quantity_multiply', 'show_shipping_days','show_shipping_notes', 'enable_cash_on_delivery', 'show_cash_on_delivery_notes', 'low_stock_quantity_warning',];
-                $boolValues = [];
-                foreach ($boolFields as $field) {
-                    $val = $row[$field] ?? 0;
-                    if (!in_array((string)$val, ['0', '1'])) {
-                        $optionalWarnings[] = "$field was invalid, set to 0.";
-                        $val = 0;
-                    }
-                    $boolValues[$field] = (int)$val;
-                }
-
-                if (!empty($optionalWarnings)) {
-                    flash(translate('Row "' . $row['name'] . '" imported with warnings: ' . implode(' ', $optionalWarnings)))->warning();
-                }
+                $brandId=$row['brand_id']??null;
+                $discountType=$row['discount_type'];$stockVisibilityState=$row['stock_visibility_state'];
+                $frequentlyBoughtSelectionType=$row['frequently_bought_selection_type'];$shippingType=$row['shipping_type'];
+                $boolValues=[];
+                foreach(['published','featured','todays_deal','refundable','show_refund_notes','has_warranty','show_warranty_note',
+                    'is_product_quantity_multiply','show_shipping_days','show_shipping_notes','enable_cash_on_delivery','show_cash_on_delivery_notes'] as $field){$boolValues[$field]=(int)$row[$field];}
 
                 $approved = 1;
                 if ($user->user_type == 'seller' && get_setting('product_approve_by_admin') == 1) {
@@ -119,6 +70,7 @@ class ProductsImport implements ToCollection, WithHeadingRow, WithMultipleSheets
                 }
 
                 try {
+                    \Illuminate\Support\Facades\DB::transaction(function() use ($row,$user,$approved,$brandId,$discountType,$stockVisibilityState,$frequentlyBoughtSelectionType,$shippingType,$boolValues) {
                     $product = new Product();
 
                     $product->added_by = $user->user_type == 'seller' ? 'seller' : 'admin';
@@ -152,10 +104,10 @@ class ProductsImport implements ToCollection, WithHeadingRow, WithMultipleSheets
                     $product->discount    = $row['discount'] ?? 0;
                     $product->discount_type       = $discountType;
                     $product->discount_start_date = !empty($row['discount_start_date'])
-                        ? Carbon::createFromFormat('Y-d-m', $row['discount_start_date'])->timestamp
+                        ? $row['discount_start_date']
                         : null;
                     $product->discount_end_date   = !empty($row['discount_end_date'])
-                        ? Carbon::createFromFormat('Y-d-m', $row['discount_end_date'])->timestamp
+                        ? $row['discount_end_date']
                         : null;
 
                     $product->current_stock    = $row['stock'];
@@ -184,7 +136,7 @@ class ProductsImport implements ToCollection, WithHeadingRow, WithMultipleSheets
                     $product->cash_on_delivery = $boolValues['enable_cash_on_delivery'];
                     $product->show_delivery_notes = $boolValues['show_cash_on_delivery_notes'];
                     $product->delivery_note_id    = $row['cash_on_delivery_note_id'] ?? null;
-                    $product->hsn_code    = $row['hsn_code'];
+                    $product->hsn_code    = $row['hsn_code'] ?? null;
                     $product->gst_rate    = $row['gst_rate'];
                     $product->stock_visibility_state       = $stockVisibilityState;
                     $product->low_stock_quantity = $row['low_stock_quantity'];
@@ -291,12 +243,17 @@ class ProductsImport implements ToCollection, WithHeadingRow, WithMultipleSheets
                     $translation->description = $row['description'] ?? null;
                     $translation->product_id  = $product->id;
                     $translation->save();
+                    });
+                    $this->imported++;
                 } catch (\Throwable $e) {
-                    flash(translate('Error on row "' . ($row['name'] ?? '?') . '": ' . $e->getMessage()))->error();
+                    report($e);$this->skipped++;if(count($this->errors)<50)$this->errors[]='Row '.($index+2).' ('.($row['name']??'?').'): Could not save this row. Check its values or contact support.';
                 }
             }
 
-            flash(translate('Products imported successfully'))->success();
+            session()->flash('bulk_import_result',['imported'=>$this->imported,'skipped'=>$this->skipped,'errors'=>$this->errors]);
+            if($this->skipped)flash($this->imported.' products imported; '.$this->skipped.' rows need correction.')->warning();
+            elseif($this->imported)flash($this->imported.' products imported successfully.')->success();
+            else flash('No product rows were found. Fill the first template sheet or upload a CSV with the same headings.')->warning();
         }
     }
 
@@ -308,6 +265,7 @@ class ProductsImport implements ToCollection, WithHeadingRow, WithMultipleSheets
             $upload = new Upload();
             $upload->external_link = trim($url);
             $upload->type = 'image';
+            $upload->user_id = auth()->id();
             $upload->save();
             return $upload->id;
         } catch (\Exception $e) {
@@ -332,6 +290,7 @@ class ProductsImport implements ToCollection, WithHeadingRow, WithMultipleSheets
             $upload = new Upload();
             $upload->external_link = trim($url);
             $upload->type = 'video';
+            $upload->user_id = auth()->id();
             $upload->save();
             return $upload->id;
         } catch (\Exception $e) {
@@ -356,6 +315,7 @@ class ProductsImport implements ToCollection, WithHeadingRow, WithMultipleSheets
             $upload = new Upload();
             $upload->external_link = trim($url);
             $upload->type = 'document';
+            $upload->user_id = auth()->id();
             $upload->save();
             return $upload->id;
         } catch (\Exception $e) {

@@ -1,5 +1,6 @@
 'use strict';
-const {randomUUID, createHash} = require('node:crypto');
+const {randomUUID, createHash, randomBytes, generateKeyPairSync} = require('node:crypto');
+const {signReceipt}=require('./receipt-signing.cjs');
 const {integer, calculate, bound} = require('./money.cjs');
 const {verifyPolicy, canonical} = require('./policy.cjs');
 const success = ack => ack?.durable && ['accepted', 'duplicate'].includes(ack.status);
@@ -10,7 +11,7 @@ function definitiveRejection(path, error) {
   if (!Number.isInteger(error.status) || error.status < 400 || error.status >= 500 || [401, 429].includes(error.status)) return false;
   const scoped = ['NOT_FOUND', 'REGISTER_NOT_FOUND'];
   let codes = [];
-  if (path === 'sales') codes = ['STOCK_NOT_FOUND', 'INSUFFICIENT_STOCK', 'PRICE_MISMATCH', 'DISCOUNT_LIMIT', 'INVALID_DISCOUNT', 'PRICE_OVERRIDE_DENIED', 'CURRENCY_MISMATCH', 'INVALID_EVENT_TIME', 'SHIFT_UNAVAILABLE', 'INVALID_CHANGE', 'PAYMENT_REFERENCE_REQUIRED', 'TENDER_TOTAL_MISMATCH', 'INVALID_TENDER', 'QUANTITY_LIMIT'];
+  if (path === 'sales') codes = ['STOCK_NOT_FOUND', 'INSUFFICIENT_STOCK', 'PRICE_MISMATCH', 'DISCOUNT_LIMIT', 'INVALID_DISCOUNT', 'PRICE_OVERRIDE_DENIED', 'CURRENCY_MISMATCH', 'INVALID_EVENT_TIME', 'SHIFT_UNAVAILABLE', 'INVALID_CHANGE', 'PAYMENT_REFERENCE_REQUIRED', 'TENDER_TOTAL_MISMATCH', 'INVALID_TENDER', 'QUANTITY_LIMIT', 'INVALID_RECEIPT_PROOF'];
   else if (path === 'inventory/allocations/request') codes = ['ALLOCATION_ALREADY_OPEN', 'ALLOCATION_LIMIT', 'INSUFFICIENT_STOCK', 'STOCK_NOT_FOUND', 'INVALID_PRICE', 'INVALID_PROMOTION', 'PRICE_WINDOW_CHANGED'];
   else if (path === 'inventory/allocations/reconcile') codes = ['RECONCILIATION_INCOMPLETE', 'RECONCILIATION_CONFLICT', 'ALLOCATION_UNAVAILABLE'];
   else if (/^tenders\/[1-9][0-9]*\/verify$/.test(path)) codes = [...scoped, 'TENDER_NOT_PENDING', 'SETTLEMENT_REFERENCE_USED'];
@@ -19,7 +20,7 @@ function definitiveRejection(path, error) {
   return codes.includes(error.code);
 }
 class Client {
-  constructor(store, transport, credentials) { this.s = store; this.transport = transport; this.credentials = credentials; }
+  constructor(store, transport, credentials) { this.s = store; this.transport = transport; this.credentials = credentials; this.s.remove('meta','checkout_lock'); }
   boot() { const b = this.s.meta('boot'); if (!b) throw Error('Connect this computer first.'); return b; }
   require(ability, financial = false) {
     const b = this.boot();
@@ -77,6 +78,20 @@ class Client {
       if (!shift && b.active_shift) this.s.set('shift', {client_shift_id: b.active_shift.client_shift_id, server_id: b.active_shift.id, opening_minor: b.active_shift.opening_minor, expected_minor: b.active_shift.expected_minor, status: 'open', occurred_at: b.active_shift.opened_at});
     }); return b;
   }
+  async enrollReceiptKey() {
+    let publicKey=this.s.meta('receipt_public_key');
+    if(!publicKey || !this.s.meta('receipt_private_key')) {
+      const pair=generateKeyPairSync('ed25519');publicKey=pair.publicKey.export({format:'der',type:'spki'}).subarray(-32).toString('base64');
+      const encrypted=await this.credentials.encrypt(pair.privateKey.export({format:'pem',type:'pkcs8'}));
+      this.s.transaction(()=>{this.s.set('receipt_public_key',publicKey);this.s.set('receipt_private_key',encrypted);this.s.remove('meta','receipt_signing_key');});
+    }
+    if(!this.s.meta('receipt_signing_key')) {
+      const result=await this.api('devices/receipt-key','POST',{public_key:publicKey});
+      const expected=createHash('sha256').update(Buffer.from(publicKey,'base64')).digest('hex').slice(0,32);
+      if(result.public_key!==publicKey||result.key_id!==expected)throw Error('The receipt signing setup did not match this computer. Reconnect and try again.');
+      this.s.set('receipt_signing_key',result);
+    }
+  }
   async mutation(path, payload, identity = randomUUID(), context = {}) {
     const old = this.s.db.prepare('SELECT * FROM requests WHERE id=?').get(identity);
     if (old && (old.path !== path || old.payload !== JSON.stringify({payload, context}))) throw Error('Operation identity was already used for another request.');
@@ -132,9 +147,10 @@ class Client {
       if (event.type === 'refund.created') { const r = this.s.get('return', event.payload.client_refund_id); this.s.put('return', event.payload.client_refund_id, {...r, server: ack, sync_status: success(ack) ? 'accepted' : 'needs_review'}); }
     });
   }
-  async sync() {
+  async sync(options = {}) {
     if (this.s.meta('transfer_locked')) throw Error('This computer was locked for transfer. Use the destination computer.');
     await this.refreshBootstrap();
+    if(this.boot().receipt_signing && this.boot().abilities.includes('pos:sale:write')) await this.enrollReceiptKey();
     for (const row of this.unresolved()) {
       try { await this.replayRequest(row); }
       catch (e) {
@@ -161,7 +177,7 @@ class Client {
       if (!result.durable) break;
     }
     await this.refreshBootstrap();
-    if (this.boot().offline_catalog_sales) this.s.set('cursor_ready', false);
+    if (this.boot().offline_catalog_sales && Date.now()-this.s.meta('last_catalog_snapshot',0)>21600000) this.s.set('cursor_ready', false);
     if(this.boot().offline_catalog_sales && this.boot().device?.offline_allowed && this.boot().abilities.includes('pos:inventory:write') && !this.unresolved().some(r=>r.path==='inventory/allocations/reconcile') && !this.s.events(true).some(e=>e.type==='sale.completed' && e.payload.inventory_mode!=='catalog') && !this.s.reviews().some(e=>e.type==='sale.completed' && e.payload.inventory_mode!=='catalog')) {
       const old=this.s.list('allocation').filter(a=>a.status==='open');
       for(let i=0;i<old.length;i+=200) {
@@ -169,19 +185,33 @@ class Client {
         catch(e) { if(e.status===403 && ['PERMISSION_DENIED','OFFLINE_DISABLED'].includes(e.code)) break; throw e; }
       }
     }
-    await this.refreshCatalog();
+    if(options.refreshCatalog!==false) await this.refreshCatalog({full:options.fullCatalog===true,resume:options.resumeCatalog===true});
     await this.refreshAllocations();
     this.s.set('restore_pending', false); this.s.set('last_sync', Date.now()); return {...this.state(), syncSummary: {uploaded: this.s.events().filter(e => success(e.ack)).length, waiting: this.s.events(true).length + this.s.reviews().length + this.unresolved().length}};
   }
-  async refreshCatalog() {
-    if (!this.s.meta('cursor_ready')) {
-      let page = await this.api('catalog/snapshot?limit=500'); const items = [...page.data], high = page.high_water_mark;
+  clearCatalog() {
+    if(this.s.meta('checkout_lock'))throw Error('Finish or close the payment window before clearing products.');
+    this.s.transaction(()=>{this.s.db.prepare("DELETE FROM records WHERE kind IN ('catalog','held')").run();this.s.set('cart',[]);this.s.set('cursor_ready',false);this.s.set('catalog_paused',true);});
+    return this.state();
+  }
+  async fullCatalogSync() {
+    if(this.s.meta('checkout_lock'))throw Error('Finish or close the payment window before refreshing products.');
+    if(this.s.meta('manual_offline'))throw Error('Click Connect & sync first, then Refresh all products.');
+    return this.sync({fullCatalog:true,resumeCatalog:true});
+  }
+  async refreshCatalog({full=false,resume=false}={}) {
+    if(this.s.meta('catalog_paused')&&!resume&&!full)return;
+    if(this.s.meta('checkout_lock'))return;
+    if (full || this.s.meta('catalog_paused') || !this.s.meta('cursor_ready')) {
+      let page = await this.api('catalog/snapshot?limit=500'+(full||this.s.meta('catalog_paused')?'&fresh=1':'')); const items = [...page.data], high = page.high_water_mark;
       while (page.has_more) { page = await this.api(`catalog/snapshot?limit=500&snapshot_id=${page.snapshot_id}&after=${page.next_after}`); items.push(...page.data); }
-      this.s.transaction(() => { this.s.db.prepare("DELETE FROM records WHERE kind='catalog'").run(); for (const item of items) this.s.put('catalog', item.stock_id, item); this.s.set('cursor', high); this.s.set('cursor_ready', true); });
+      if(this.s.meta('checkout_lock'))return;
+      this.s.transaction(() => { this.s.set('last_catalog_snapshot',Date.now()); this.s.db.prepare("DELETE FROM records WHERE kind='catalog'").run(); for (const item of items) this.s.put('catalog', item.stock_id, item); this.s.set('cursor', high); this.s.set('cursor_ready', true);this.s.set('catalog_paused',false); });
     }
     let page;
     do {
       page = await this.api('sync/pull?limit=500&cursor=' + this.s.meta('cursor', 0));
+      if(this.s.meta('checkout_lock'))return;
       this.s.transaction(() => {
         for (const change of page.data) {
           if (change.entity === 'catalog') { if (change.operation === 'delete') this.s.remove('catalog', change.id); else this.s.put('catalog', change.id, change.payload); }
@@ -191,6 +221,8 @@ class Client {
       });
     } while (page.has_more);
     this.s.set('catalog_applied_sales',this.s.list('sale').filter(s=>s.sync_status==='accepted').map(s=>s.client_sale_id));
+    const ids=new Set(this.s.list('catalog').map(i=>i.stock_id));
+    this.s.transaction(()=>{this.s.set('cart',this.s.meta('cart',[]).filter(l=>ids.has(l.stock_id)));for(const held of this.s.list('held')){held.cart=held.cart.filter(l=>ids.has(l.stock_id));if(held.cart.length)this.s.put('held',held.id,held);else this.s.remove('held',held.id);}});
   }
   async refreshAllocations() {
     if (!this.boot().abilities.includes('pos:inventory:read')) return;
@@ -237,7 +269,7 @@ class Client {
     return this.s.meta('shift');
   }
   disconnect() { this.s.set('manual_offline', true); return this.state(); }
-  async connect() { this.s.set('manual_offline', false); return this.sync(); }
+  async connect() { this.s.set('manual_offline', false); return this.sync({resumeCatalog:true}); }
   allocation(stockId, quantity) {
     const b = this.boot();
     return this.s.list('allocation').find(a => {
@@ -303,9 +335,14 @@ class Client {
     });
     if (applied !== q.total_minor) throw Error('Payments must equal the total.');
     const wireLines = q.lines.map(({snapshot, subtotal_minor, ...l}) => l);
-    const payload = {client_sale_id: id, register_id: b.registers[0].id, currency: b.currency, lines: wireLines, tenders, grand_total_minor: q.total_minor, ...(input.customer?.name ? {customer: input.customer} : {})};
-    const receipt = {...q, local_request: canonical(input), client_sale_id: id, number: 'LOCAL-' + id, currency: b.currency, store: b.branding, register: b.registers[0].code, cashier: b.cashier_name || 'Cashier', occurred_at: new Date(this.serverNow()).toISOString(), customer: input.customer?.name ? input.customer : {name: 'Walk-in customer'}, tenders, mode, sync_status: 'pending'};
+    const verificationToken=createHash('sha256').update('pos-receipt:'+id).digest('base64url');
+    const payload = {verification_token:verificationToken, client_sale_id: id, register_id: b.registers[0].id, currency: b.currency, lines: wireLines, tenders, grand_total_minor: q.total_minor, ...(input.customer?.name ? {customer: input.customer} : {})};
+    const receipt = {...q, verification_url:this.s.meta('origin')+'/api/pos/v1/receipts/verify/'+verificationToken, local_request: canonical(input), client_sale_id: id, number: 'LOCAL-' + id, currency: b.currency, store: b.branding, register: b.registers[0].code, cashier: b.cashier_name || 'Cashier', occurred_at: new Date(Math.max(this.serverNow(),...q.lines.map(l=>l.catalog_policy?Date.parse(l.catalog_policy.policy.issued_at):0),Number(this.s.meta('receipt_signing_key')?.issued_at||0)*1000)).toISOString(), customer: input.customer?.name ? input.customer : {name: 'Walk-in customer'}, tenders, mode, sync_status: 'pending'};
+    if(this.s.meta('receipt_signing_key') && this.s.meta('receipt_private_key')) {
+      const signed=signReceipt(receipt,verificationToken,this.s.meta('receipt_signing_key'),await this.credentials.decrypt(this.s.meta('receipt_private_key')),this.s.meta('origin'));payload.receipt_proof=signed.proof;receipt.verification_url=signed.url;
+    }
     if (mode === 'online') {
+      payload.occurred_at=receipt.occurred_at;
       if (this.s.events(true).length) await this.sync();
       const active = this.shift(); if (!active.server_id) throw Error('Sync the open shift before online checkout.');
       payload.shift_id = active.server_id;
@@ -317,7 +354,7 @@ class Client {
       if (policies.some(p => q.total_minor > p.max_offline_sale_minor || spent + q.total_minor > p.max_offline_budget_minor)) throw Error('Sync your saved sales and refresh your offline stock before recording this sale.');
     } else {
       payload.inventory_mode = 'catalog';
-      receipt.occurred_at = new Date(Math.max(this.serverNow(), ...q.lines.map(l => Date.parse(l.catalog_policy.policy.issued_at)))).toISOString();
+      // The captured timestamp is retained because it is covered by the receipt signature.
     }
     payload.client_shift_id = shift.client_shift_id; payload.occurred_at = receipt.occurred_at;
     this.s.transaction(() => {
@@ -362,6 +399,13 @@ class Client {
       shift.expected_minor -= amount; this.s.set('shift', shift);
     }); return this.state();
   }
+  async prepareReceipt(receipt) {
+    if(receipt.verification_url?.includes('/receipts/check/'))return receipt;
+    if(!this.s.meta('receipt_signing_key')||!this.s.meta('receipt_private_key'))throw Error('Connect once to finish the receipt signing setup. The sale itself does not need to be uploaded to verify its receipt.');
+    const nonce=createHash('sha256').update('pos-receipt:'+receipt.client_sale_id).digest('base64url');
+    const signed=signReceipt(receipt,nonce,this.s.meta('receipt_signing_key'),await this.credentials.decrypt(this.s.meta('receipt_private_key')),this.s.meta('origin'));
+    return {...receipt,verification_url:signed.url};
+  }
   async receipt(id) { this.require('receipt:read'); integer(id, 1); const r = await this.api('receipts/' + id); this.s.put('receipt', id, r.receipt); return r.receipt; }
   reprint(receipt) {
     this.require('receipt:reprint', true);
@@ -403,7 +447,7 @@ class Client {
   async report(from, to) { this.require('report:read'); const data = await this.api('reports/summary?' + new URLSearchParams({...(from ? {from} : {}), ...(to ? {to} : {})})); this.s.set('report', data); return data; }
   state() {
     const boot = this.s.meta('boot'), used = this.localStockUse();
-    return {manualOffline: !!this.s.meta('manual_offline'), paired: !!this.s.meta('credential'), origin: this.s.meta('origin', 'https://rewashop.com'), boot, shift: this.s.meta('shift'), catalog: this.s.list('catalog').map(item => ({...item, local_quantity: this.available(item.stock_id, used), image_src: item.image_url && this.s.get('photo', createHash('sha256').update(item.image_url).digest('hex')) ? 'pos-image://cache/' + createHash('sha256').update(item.image_url).digest('hex') : null})), allocations: this.s.list('allocation'), sales: this.s.list('sale').reverse(), returns: this.s.list('return'), events: this.s.events().map(e => ({...e, review_resolved: !!this.s.get('resolved', e.event_id)})), pendingRequests: this.unresolved().map(r => ({id: r.id, path: r.path})), requestFailures: this.s.db.prepare('SELECT id,path,response FROM requests WHERE response IS NOT NULL').all().map(r => ({id:r.id,path:r.path,...JSON.parse(r.response)})).filter(r => r.rejected), blocked: this.s.meta('blocked'), transferLocked: this.s.meta('transfer_locked'), cart: this.s.meta('cart', []), held: this.s.list('held'), lastSync: this.s.meta('last_sync'), remoteSales: this.s.meta('remote_sales'), report: this.s.meta('report'), pairing: this.s.meta('pairing') ? {pairing_id: this.s.meta('pairing').pairing_id, expires_at: this.s.meta('pairing').expires_at, recovery_device_id: boot?.device_id} : null};
+    return {catalogPaused:!!this.s.meta('catalog_paused'),autoSync:this.s.meta('auto_sync',true),autoSyncStatus:this.s.meta('auto_sync_status',{}),manualOffline: !!this.s.meta('manual_offline'), paired: !!this.s.meta('credential'), origin: this.s.meta('origin', 'https://rewashop.com'), boot, shift: this.s.meta('shift'), catalog: this.s.list('catalog').map(item => ({...item, local_quantity: this.available(item.stock_id, used), image_src: item.image_url && this.s.get('photo', createHash('sha256').update(item.image_url).digest('hex')) ? 'pos-image://cache/' + createHash('sha256').update(item.image_url).digest('hex') : null})), allocations: this.s.list('allocation'), sales: this.s.list('sale').reverse(), returns: this.s.list('return'), events: this.s.events().map(e => ({...e, review_resolved: !!this.s.get('resolved', e.event_id)})), pendingRequests: this.unresolved().map(r => ({id: r.id, path: r.path})), requestFailures: this.s.db.prepare('SELECT id,path,response FROM requests WHERE response IS NOT NULL').all().map(r => ({id:r.id,path:r.path,...JSON.parse(r.response)})).filter(r => r.rejected), blocked: this.s.meta('blocked'), transferLocked: this.s.meta('transfer_locked'), cart: this.s.meta('cart', []), held: this.s.list('held'), lastSync: this.s.meta('last_sync'), remoteSales: this.s.meta('remote_sales'), report: this.s.meta('report'), pairing: this.s.meta('pairing') ? {pairing_id: this.s.meta('pairing').pairing_id, expires_at: this.s.meta('pairing').expires_at, recovery_device_id: boot?.device_id} : null};
   }
 }
 module.exports = {Client, success};

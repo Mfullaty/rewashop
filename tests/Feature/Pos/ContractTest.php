@@ -20,7 +20,7 @@ class ContractTest extends PosTestCase
                 $this->assertNotContains('web', $middleware); $this->assertNotContains('api', $middleware);
             }
         }
-        $this->assertSame(54, $count);
+        $this->assertSame(57, $count);
         $this->assertSame(6, count($document['components']['schemas']['PushRequest']['properties']['events']['items']['oneOf']));
     }
 }

@@ -85,4 +85,17 @@ class DownloadedCatalogTest extends PosTestCase
         DB::disableQueryLog();
     }
 
+    public function test_full_refresh_rebuilds_live_store_and_normal_sync_prunes_raw_deletions(): void
+    {
+        $catalog=app(CatalogService::class);$catalog->stock(11);$catalog->stock(22);
+        $context=$this->context(1,$this->device());$old=$catalog->snapshot($context,null,0,500);
+        DB::table('product_stocks')->where('id',11)->delete();DB::table('products')->where('id',101)->delete();
+        $this->stock(12,102,1,'admin',10,'150.00','00102');
+        $delta=$catalog->changes($context,$old['high_water_mark'],500,false);
+        $this->assertSame('delete',$delta['data'][0]['operation']);$this->assertSame('11',$delta['data'][0]['id']);
+        $fresh=$catalog->snapshot($context,null,0,500,true);
+        $this->assertNotSame($old['snapshot_id'],$fresh['snapshot_id']);$this->assertSame([12],array_column($fresh['data'],'stock_id'));
+        $this->assertDatabaseHas('pos_catalog_entries',['seller_id'=>2,'stock_id'=>22]);
+        $page=$catalog->snapshot($context,$old['snapshot_id'],0,500);$this->assertSame(11,$page['data'][0]['stock_id']);
+    }
 }

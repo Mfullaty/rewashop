@@ -1,6 +1,6 @@
 {
   "name": "rewashop-desktop-pos",
-  "version": "1.1.0",
+  "version": "1.2.1",
   "private": true,
   "description": "RewaShop offline Windows point of sale",
   "author": "RewaShop",
@@ -15,7 +15,9 @@
   },
   "devDependencies": {
     "electron": "44.7.0",
-    "electron-builder": "26.15.3"
+    "electron-builder": "26.15.3",
+    "jsqr": "^1.4.0",
+    "pngjs": "^7.0.0"
   },
   "build": {
     "appId": "com.rewashop.pos",
@@ -53,5 +55,8 @@
       ],
       "category": "Office"
     }
+  },
+  "dependencies": {
+    "qrcode-generator": "^2.0.4"
   }
 }

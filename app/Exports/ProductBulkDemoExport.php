@@ -28,19 +28,19 @@ class ProductBulkDemoExport implements WithMultipleSheets
     public function sheets(): array
     {
         return [
-            new ProductTemplateSheet(),
-            new CategorySheet(),
-            new ProductSheet(),
-            new BrandSheet(),
-            new FlashSaleSheet(),
-            new UnitSheet(),
-            new NoteSheet(),
-            new WarrantySheet(),
+            new ProductDemoProductTemplateSheet(),
+            new ProductDemoCategorySheet(),
+            new ProductDemoProductSheet(),
+            new ProductDemoBrandSheet(),
+            new ProductDemoFlashSaleSheet(),
+            new ProductDemoUnitSheet(),
+            new ProductDemoNoteSheet(),
+            new ProductDemoWarrantySheet(),
         ];
     }
 }
 
-trait AutoSizeColumns
+trait ProductDemoAutoSizeColumns
 {
     public function registerEvents(): array
     {
@@ -56,10 +56,10 @@ trait AutoSizeColumns
     }
 }
 
-class ProductTemplateSheet implements FromCollection, WithTitle, WithHeadings, WithStyles, WithEvents
+class ProductDemoProductTemplateSheet implements FromCollection, WithTitle, WithHeadings, WithStyles, WithEvents
 {
     use PreventDemoModeChanges;
-    use AutoSizeColumns;
+    use ProductDemoAutoSizeColumns;
 
     public function title(): string
     {
@@ -135,71 +135,13 @@ class ProductTemplateSheet implements FromCollection, WithTitle, WithHeadings, W
 
     public function collection()
     {
-        return collect([
-            [
-                'Demo Product 22', 
-                1, 
-                1, 
-                '1,2', 
-                1,
-                0.5, 
-                3, 
-                'cwae123124cn', 
-                'Best Selling,demo Product,Baby product',
-                '', 
-                '', 
-                'https://www.youtube.com/watch?v=m9coOXt5nuw, https://www.youtube.com/watch?v=QC8iQqtG0hg',
-                '', 
-                '', 
-                '', 
-                'Demo Description',
-                'Demo Meta Title', 
-                'Demo Meta Description', 
-                '', 
-                'Demo Meta Tag1, Demo Meta Tag2',
-                100, 
-                'Y-D-M', 
-                'Y-D-M', 
-                20, 
-                'amount/percent',
-                100, 
-                'demo-product-231', 
-                'https://www.youtube.com/watch?v=m9coOXt5nuw', 
-                'Demo Link',
-                '0/1', 
-                '0/1', 
-                '0/1',
-                3, 
-                30, 
-                'amount/percent',
-                '0/1', 
-                '0/1', 
-                2, 
-                20,
-                '0/1', 
-                5, 
-                '0/1', 
-                3,
-                'free/ flat_rate', 
-                150, 
-                '0/1',
-                7, 
-                '0/1',
-
-                '0/1',
-                4,
-                '0/1',
-                '0/1',
-                7,
-                'adsb21',
-                5,
-                'hide/quantity/text',
-                5,
-                'product/category',
-                '2,3,5',
-                '1,6,7',
-            ],
-        ]);
+        $example=['name'=>'Example product','main_category_id'=>Category::orderBy('id')->value('id'),
+            'brand_id'=>Brand::orderBy('id')->value('id'),'unit_id'=>Unit::orderBy('id')->value('id'),
+            'unit_price'=>100,'stock'=>10,'minimum_purchase_qty'=>1,'weight'=>0,'published'=>1,
+            'discount'=>0,'discount_type'=>'amount','shipping_type'=>'free','shipping_cost'=>0,
+            'gst_rate'=>0,'stock_visibility_state'=>'quantity','low_stock_quantity'=>0,
+            'frequently_bought_selection_type'=>'product'];
+        return collect([array_map(fn($heading)=>$example[$heading]??null,$this->headings())]);
     }
 
     public function styles(Worksheet $sheet): array
@@ -213,9 +155,9 @@ class ProductTemplateSheet implements FromCollection, WithTitle, WithHeadings, W
     }
 }
 
-class CategorySheet implements FromCollection, WithTitle, WithHeadings, WithStyles, WithEvents
+class ProductDemoCategorySheet implements FromCollection, WithTitle, WithHeadings, WithStyles, WithEvents
 {
-    use AutoSizeColumns;
+    use ProductDemoAutoSizeColumns;
 
     public function title(): string { return 'Category'; }
     public function headings(): array { return ['ID', 'Name']; }
@@ -232,16 +174,16 @@ class CategorySheet implements FromCollection, WithTitle, WithHeadings, WithStyl
     }
 }
 
-class ProductSheet implements FromCollection, WithTitle, WithHeadings, WithStyles, WithEvents
+class ProductDemoProductSheet implements FromCollection, WithTitle, WithHeadings, WithStyles, WithEvents
 {
-    use AutoSizeColumns;
+    use ProductDemoAutoSizeColumns;
 
     public function title(): string { return 'Product'; }
     public function headings(): array { return ['ID', 'Name']; }
 
     public function collection()
     {
-        return Product::select('id', 'name')->orderBy('id')->get()
+        return Product::select('id', 'name')->when(auth()->user()?->user_type==='seller',fn($q)=>$q->where('added_by','seller')->where('user_id',auth()->id()))->orderBy('id')->get()
             ->map(fn($c) => [$c->id, $c->name]);
     }
 
@@ -251,9 +193,9 @@ class ProductSheet implements FromCollection, WithTitle, WithHeadings, WithStyle
     }
 }
 
-class BrandSheet implements FromCollection, WithTitle, WithHeadings, WithStyles, WithEvents
+class ProductDemoBrandSheet implements FromCollection, WithTitle, WithHeadings, WithStyles, WithEvents
 {
-    use AutoSizeColumns;
+    use ProductDemoAutoSizeColumns;
 
     public function title(): string { return 'Brand'; }
 
@@ -271,9 +213,9 @@ class BrandSheet implements FromCollection, WithTitle, WithHeadings, WithStyles,
     }
 }
 
-class FlashSaleSheet implements FromCollection, WithTitle, WithHeadings, WithStyles, WithEvents
+class ProductDemoFlashSaleSheet implements FromCollection, WithTitle, WithHeadings, WithStyles, WithEvents
 {
-    use AutoSizeColumns;
+    use ProductDemoAutoSizeColumns;
 
     public function title(): string { return 'Flash Sale'; }
     public function headings(): array { return ['ID', 'Title']; }
@@ -290,9 +232,9 @@ class FlashSaleSheet implements FromCollection, WithTitle, WithHeadings, WithSty
     }
 }
 
-class UnitSheet implements FromCollection, WithTitle, WithHeadings, WithStyles, WithEvents
+class ProductDemoUnitSheet implements FromCollection, WithTitle, WithHeadings, WithStyles, WithEvents
 {
-    use AutoSizeColumns;
+    use ProductDemoAutoSizeColumns;
 
     public function title(): string { return 'Unit'; }
     public function headings(): array { return ['ID', 'Name']; }
@@ -309,9 +251,9 @@ class UnitSheet implements FromCollection, WithTitle, WithHeadings, WithStyles, 
     }
 }
 
-class NoteSheet implements FromCollection, WithTitle, WithHeadings, WithStyles, WithEvents
+class ProductDemoNoteSheet implements FromCollection, WithTitle, WithHeadings, WithStyles, WithEvents
 {
-    use AutoSizeColumns;
+    use ProductDemoAutoSizeColumns;
 
     public function title(): string { return 'Note'; }
 
@@ -329,9 +271,9 @@ class NoteSheet implements FromCollection, WithTitle, WithHeadings, WithStyles, 
     }
 }
 
-class WarrantySheet implements FromCollection, WithTitle, WithHeadings, WithStyles, WithEvents
+class ProductDemoWarrantySheet implements FromCollection, WithTitle, WithHeadings, WithStyles, WithEvents
 {
-    use AutoSizeColumns;
+    use ProductDemoAutoSizeColumns;
 
     public function title(): string { return 'Warranty'; }
 

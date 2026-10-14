@@ -20,6 +20,11 @@ final class Schemas
     public static function sale(bool $offline = false): array
     {
         return self::base() + [
+            'receipt_proof'=>'sometimes|array:key_id,payload,signature',
+            'receipt_proof.key_id'=>'required_with:receipt_proof|string|size:32',
+            'receipt_proof.payload'=>'required_with:receipt_proof|string|max:6000',
+            'receipt_proof.signature'=>'required_with:receipt_proof|string|size:86',
+            'verification_token' => ['sometimes','string','regex:/^[A-Za-z0-9_-]{43}$/D'],
             'client_sale_id' => 'required|uuid', 'register_id' => 'required|integer|min:1',
             'shift_id' => $offline ? 'prohibited' : 'sometimes|integer|min:1',
             'client_shift_id' => $offline ? 'required|uuid' : 'prohibited',
@@ -89,6 +94,7 @@ final class Schemas
     public static function forAction(string $action): array
     {
         return match ($action) {
+            'receiptKey' => self::base()+['public_key'=>'required|string|size:44'],
             'sale' => self::sale(), 'shiftOpen' => self::shiftOpen(), 'shiftClose' => self::shiftClose(),
             'cash' => self::cash(), 'refund' => self::refund(), 'verifyTender', 'verifyRefund' => self::evidence(),
             'void', 'revoke' => self::base() + ['reason' => 'required|string|min:3|max:500'],
@@ -120,7 +126,7 @@ final class Schemas
                 'category_id' => 'sometimes|integer|min:1', 'brand_id' => 'sometimes|integer|min:1',
                 'stock_id' => 'sometimes|integer|min:1',
                 'after' => 'sometimes|integer|min:0', 'limit' => 'sometimes|integer|min:1|max:200'],
-            'snapshot' => ['snapshot_id' => 'sometimes|uuid', 'after' => 'sometimes|integer|min:0', 'limit' => 'sometimes|integer|min:1|max:2000'],
+            'snapshot' => ['fresh' => 'sometimes|boolean', 'snapshot_id' => 'sometimes|uuid', 'after' => 'sometimes|integer|min:0', 'limit' => 'sometimes|integer|min:1|max:2000'],
             'changes', 'pull' => ['cursor' => 'sometimes|integer|min:0', 'limit' => 'sometimes|integer|min:1|max:2000'],
             'sales', 'report' => ['from' => 'sometimes|date', 'to' => 'sometimes|date|after_or_equal:from',
                 'register_id' => 'sometimes|integer|min:1', 'page' => 'sometimes|integer|min:1'],

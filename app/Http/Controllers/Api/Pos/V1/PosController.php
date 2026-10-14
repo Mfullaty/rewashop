@@ -50,7 +50,7 @@ class PosController extends Controller
         if ($c->device) { $registers->where('id', $c->device->register_id); }
         elseif ($c->registerIds) { $registers->whereIn('id', $c->registerIds); }
         $settings = DB::table('pos_settings')->where('seller_id', $c->sellerId)->first();
-        return response()->json(['server_time' => now('UTC')->toIso8601String(), 'offline_catalog_sales' => true, 'schema_version' => 1, 'seller_id' => $c->sellerId, 'owner_type' => $c->ownerType,
+        return response()->json(['server_time' => now('UTC')->toIso8601String(), 'receipt_signing' => true, 'offline_catalog_sales' => true, 'schema_version' => 1, 'seller_id' => $c->sellerId, 'owner_type' => $c->ownerType,
             'currency' => $c->currency, 'minor_exponent' => 2, 'cashier_id' => $c->actor->id, 'cashier_name' => $c->actor->name,
             'registers' => $registers->get(), 'settings' => json_decode($settings->settings, true),
             'branding' => app(\App\Pos\Services\StoreProvisioningService::class)->branding($c->sellerId, $c->ownerType),
@@ -116,7 +116,7 @@ class PosController extends Controller
         return response()->json(['data' => $result, 'has_more' => $more, 'next_after' => $ids->last() ?? (int) ($data['after'] ?? 0)]);
     }
 
-    public function snapshot(PosRequest $r) { $d = $r->validated(); return response()->json(app(CatalogService::class)->snapshot($this->context($r), $d['snapshot_id'] ?? null, (int) ($d['after'] ?? 0), (int) ($d['limit'] ?? 500))); }
+    public function snapshot(PosRequest $r) { $d = $r->validated(); return response()->json(app(CatalogService::class)->snapshot($this->context($r), $d['snapshot_id'] ?? null, (int) ($d['after'] ?? 0), (int) ($d['limit'] ?? 500), (bool) ($d['fresh'] ?? false))); }
     public function changes(PosRequest $r) { $d = $r->validated(); return response()->json(app(CatalogService::class)->changes($this->context($r), (int) ($d['cursor'] ?? 0), (int) ($d['limit'] ?? 500))); }
     public function pull(PosRequest $r) { $d = $r->validated(); return response()->json(app(CatalogService::class)->changes($this->context($r), (int) ($d['cursor'] ?? 0), (int) ($d['limit'] ?? 500), false)); }
     public function pairStart(PosRequest $r) { return response()->json(app(PairingService::class)->start($r->validated()), 201); }
@@ -180,11 +180,13 @@ class PosController extends Controller
         return $q;
     }
 
+    public function receiptKey(Request $request) { $data=$request->validate(['public_key'=>'required|string|size:44']);return response()->json(app(\App\Pos\Services\ReceiptSigningService::class)->register($this->context($request),$data['public_key'])); }
+
     public function receipt(Request $r, int $id)
     {
         $c = $this->context($r); $c->require('pos:receipt:read'); $receipt = $c->scoped('pos_receipts', $id);
         $sale = $c->scoped('pos_sales', (int) $receipt->sale_id);
-        return response()->json(['receipt' => json_decode($receipt->payload, true), 'current_sale_status' => $sale->status, 'current_payment_status' => $sale->payment_status]);
+        return response()->json(['receipt' => app(\App\Pos\Services\ReceiptVerificationService::class)->ensure((int)$receipt->id), 'current_sale_status' => $sale->status, 'current_payment_status' => $sale->payment_status]);
     }
 
     public function reprint(PosRequest $r, int $id)
@@ -193,7 +195,7 @@ class PosController extends Controller
         return response()->json(app(TransactionService::class)->once($c, $this->key($r), 'receipt.reprint:'.$id, $r->validated(), function () use ($c, $r, $id) {
             $receipt = $c->scoped('pos_receipts', $id); $c->scoped('pos_sales', (int) $receipt->sale_id);
             app(AuditService::class)->record($c, 'receipt.reprint', (string) $id, $r->validated());
-            return ['receipt' => json_decode($receipt->payload, true), 'duplicate_receipt' => true];
+            return ['receipt' => app(\App\Pos\Services\ReceiptVerificationService::class)->ensure((int)$receipt->id), 'duplicate_receipt' => true];
         }));
     }
 

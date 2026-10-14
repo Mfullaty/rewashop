@@ -4,7 +4,7 @@ on:
   pull_request:
     paths: ['desktop/pos/**', 'contracts/pos-v1.ts', '.github/workflows/pos-desktop.yml']
   push:
-    branches: ['feat/windows-offline-pos', 'feat/pos-simple-offline']
+    branches: ['feat/windows-offline-pos', 'feat/pos-simple-offline', 'feat/pos-receipts-autosync']
     paths: ['desktop/pos/**', '.github/workflows/pos-desktop.yml']
 permissions:
   contents: read

@@ -24,19 +24,19 @@ class ProductsExport implements WithMultipleSheets
     public function sheets(): array
     {
         return [
-            new ProductTemplateSheet(),
-            new CategorySheet(),
-            new ProductSheet(),
-            new BrandSheet(),
-            new FlashSaleSheet(),
-            new UnitSheet(),
-            new NoteSheet(),
-            new WarrantySheet(),
+            new ProductExportProductTemplateSheet(),
+            new ProductExportCategorySheet(),
+            new ProductExportProductSheet(),
+            new ProductExportBrandSheet(),
+            new ProductExportFlashSaleSheet(),
+            new ProductExportUnitSheet(),
+            new ProductExportNoteSheet(),
+            new ProductExportWarrantySheet(),
         ];
     }
 }
 
-trait AutoSizeColumns
+trait ProductExportAutoSizeColumns
 {
     public function registerEvents(): array
     {
@@ -52,11 +52,11 @@ trait AutoSizeColumns
     }
 }
 
-class ProductTemplateSheet implements FromCollection, WithMapping, WithHeadings, WithStyles, WithEvents, WithTitle
+class ProductExportProductTemplateSheet extends \PhpOffice\PhpSpreadsheet\Cell\DefaultValueBinder implements FromCollection, WithMapping, WithHeadings, WithStyles, WithEvents, WithTitle, \Maatwebsite\Excel\Concerns\WithCustomValueBinder
 {
     use PreventDemoModeChanges;
 
-    use AutoSizeColumns;
+    use ProductExportAutoSizeColumns;
 
     public function title(): string
     {
@@ -65,7 +65,7 @@ class ProductTemplateSheet implements FromCollection, WithMapping, WithHeadings,
 
     public function collection()
     {
-        return Product::with(['stocks', 'product_categories'])->get();
+        return Product::with(['stocks', 'product_categories','flash_deal_products'])->when(auth()->user()?->user_type==='seller',fn($q)=>$q->where('added_by','seller')->where('user_id',auth()->id()))->get();
     }
 
     public function headings(): array
@@ -134,6 +134,12 @@ class ProductTemplateSheet implements FromCollection, WithMapping, WithHeadings,
         ];
     }
 
+    public function bindValue(\PhpOffice\PhpSpreadsheet\Cell\Cell $cell,$value): bool
+    {
+        if(is_string($value)){$cell->setValueExplicit($value,\PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);return true;}
+        return parent::bindValue($cell,$value);
+    }
+
     public function map($product): array
     {
         $qty = 0;
@@ -165,7 +171,7 @@ class ProductTemplateSheet implements FromCollection, WithMapping, WithHeadings,
             $product->category_id,
             $product->brand_id,
             $relatedCategories,
-            $product->unit,
+            is_numeric($product->unit)?(int)$product->unit:Unit::where('name',$product->unit)->value('id'),
             $product->weight,
             $product->min_qty,
             $product->barcode,
@@ -182,11 +188,11 @@ class ProductTemplateSheet implements FromCollection, WithMapping, WithHeadings,
             $this->getUploadLink($product->meta_img),
             $product->meta_keywords,
             $product->unit_price,
-            $product->discount_start_date ? Carbon::createFromTimestamp($product->discount_start_date)->format('Y-d-m') : null,
-            $product->discount_end_date ? Carbon::createFromTimestamp($product->discount_end_date)->format('Y-d-m') : null,
+            $product->discount_start_date ? Carbon::createFromTimestamp($product->discount_start_date)->format('Y-m-d') : null,
+            $product->discount_end_date ? Carbon::createFromTimestamp($product->discount_end_date)->format('Y-m-d') : null,
             $product->discount,
             $product->discount_type,
-            $product->current_stock,
+            $qty,
             $sku,
             $product->external_link,
             $product->external_link_btn,
@@ -273,9 +279,9 @@ class ProductTemplateSheet implements FromCollection, WithMapping, WithHeadings,
 }
 
 
-class CategorySheet implements FromCollection, WithTitle, WithHeadings, WithStyles, WithEvents
+class ProductExportCategorySheet implements FromCollection, WithTitle, WithHeadings, WithStyles, WithEvents
 {
-    use AutoSizeColumns;
+    use ProductExportAutoSizeColumns;
 
     public function title(): string
     {
@@ -298,9 +304,9 @@ class CategorySheet implements FromCollection, WithTitle, WithHeadings, WithStyl
     }
 }
 
-class ProductSheet implements FromCollection, WithTitle, WithHeadings, WithStyles, WithEvents
+class ProductExportProductSheet implements FromCollection, WithTitle, WithHeadings, WithStyles, WithEvents
 {
-    use AutoSizeColumns;
+    use ProductExportAutoSizeColumns;
 
     public function title(): string
     {
@@ -313,7 +319,7 @@ class ProductSheet implements FromCollection, WithTitle, WithHeadings, WithStyle
 
     public function collection()
     {
-        return Product::select('id', 'name')->orderBy('id')->get()
+        return Product::select('id', 'name')->when(auth()->user()?->user_type==='seller',fn($q)=>$q->where('added_by','seller')->where('user_id',auth()->id()))->orderBy('id')->get()
             ->map(fn($c) => [$c->id, $c->name]);
     }
 
@@ -323,9 +329,9 @@ class ProductSheet implements FromCollection, WithTitle, WithHeadings, WithStyle
     }
 }
 
-class BrandSheet implements FromCollection, WithTitle, WithHeadings, WithStyles, WithEvents
+class ProductExportBrandSheet implements FromCollection, WithTitle, WithHeadings, WithStyles, WithEvents
 {
-    use AutoSizeColumns;
+    use ProductExportAutoSizeColumns;
 
     public function title(): string
     {
@@ -349,9 +355,9 @@ class BrandSheet implements FromCollection, WithTitle, WithHeadings, WithStyles,
     }
 }
 
-class FlashSaleSheet implements FromCollection, WithTitle, WithHeadings, WithStyles, WithEvents
+class ProductExportFlashSaleSheet implements FromCollection, WithTitle, WithHeadings, WithStyles, WithEvents
 {
-    use AutoSizeColumns;
+    use ProductExportAutoSizeColumns;
 
     public function title(): string
     {
@@ -374,9 +380,9 @@ class FlashSaleSheet implements FromCollection, WithTitle, WithHeadings, WithSty
     }
 }
 
-class UnitSheet implements FromCollection, WithTitle, WithHeadings, WithStyles, WithEvents
+class ProductExportUnitSheet implements FromCollection, WithTitle, WithHeadings, WithStyles, WithEvents
 {
-    use AutoSizeColumns;
+    use ProductExportAutoSizeColumns;
 
     public function title(): string
     {
@@ -399,9 +405,9 @@ class UnitSheet implements FromCollection, WithTitle, WithHeadings, WithStyles, 
     }
 }
 
-class NoteSheet implements FromCollection, WithTitle, WithHeadings, WithStyles, WithEvents
+class ProductExportNoteSheet implements FromCollection, WithTitle, WithHeadings, WithStyles, WithEvents
 {
-    use AutoSizeColumns;
+    use ProductExportAutoSizeColumns;
 
     public function title(): string
     {
@@ -425,9 +431,9 @@ class NoteSheet implements FromCollection, WithTitle, WithHeadings, WithStyles, 
     }
 }
 
-class WarrantySheet implements FromCollection, WithTitle, WithHeadings, WithStyles, WithEvents
+class ProductExportWarrantySheet implements FromCollection, WithTitle, WithHeadings, WithStyles, WithEvents
 {
-    use AutoSizeColumns;
+    use ProductExportAutoSizeColumns;
 
     public function title(): string
     {
